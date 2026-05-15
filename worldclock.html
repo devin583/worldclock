@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>WorldClock</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --c1:#e8c87a;--c2:#78bfe8;
+  --wbg:rgba(14,14,24,.95);--bd:rgba(255,255,255,.07);--rd:20px;
+  --t1:rgba(255,255,255,.90);--t2:rgba(255,255,255,.42);--t3:rgba(255,255,255,.20);
+}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:radial-gradient(ellipse at 35% 25%,#0f0f20 0%,#080813 55%,#060b12 100%);
+  font-family:'Segoe UI',-apple-system,system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+#W{
+  position:absolute;border-radius:var(--rd);background:var(--wbg);
+  border:1px solid var(--bd);overflow:hidden;transform-origin:top left;
+  box-shadow:0 28px 80px rgba(0,0,0,.80),0 4px 18px rgba(0,0,0,.45),
+             inset 0 1px 0 rgba(255,255,255,.07);
+  min-width:330px;
+}
+
+/* ── Bar ── */
+#bar{
+  display:flex;align-items:center;padding:10px 13px 9px;
+  border-bottom:1px solid var(--bd);cursor:move;gap:8px;user-select:none;
+}
+.btitle{flex:1;font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--t3)}
+.bctrl{display:flex;gap:4px}
+.ibtn{
+  width:27px;height:27px;border:none;border-radius:7px;
+  background:rgba(255,255,255,.04);color:var(--t2);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .15s,color .15s;flex-shrink:0;padding:0;
+}
+.ibtn:hover{background:rgba(255,255,255,.09);color:var(--t1)}
+.ibtn.on{background:rgba(255,255,255,.13);color:#fff}
+
+/* ── Panels ── */
+#panels{display:flex}
+.cp{flex:1;padding:16px 18px 14px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.cp+.cp{border-left:1px solid var(--bd)}
+.clbl{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+.ctz{font-size:9.5px;color:var(--t3);letter-spacing:.03em}
+.cdig{
+  font-family:'Consolas','Cascadia Code','Courier New',monospace;
+  font-weight:300;line-height:1;letter-spacing:.04em;
+}
+.cdt{font-size:10px;color:var(--t3);letter-spacing:.04em}
+.cdiff{
+  font-size:9.5px;color:var(--t3);background:rgba(255,255,255,.04);
+  border-radius:20px;padding:2px 9px;margin-top:3px;white-space:nowrap;
+}
+
+/* ── Footer ── */
+#foot{border-top:1px solid var(--bd);padding:9px 13px;display:flex;align-items:center;gap:10px}
+.mgrp{display:flex;background:rgba(255,255,255,.04);border-radius:8px;padding:2px;gap:1px}
+.mbtn{
+  padding:4px 9px;border-radius:6px;border:none;background:none;
+  color:var(--t2);font-size:10.5px;font-family:inherit;cursor:pointer;
+  transition:all .15s;white-space:nowrap;
+}
+.mbtn.on{background:rgba(255,255,255,.10);color:var(--t1)}
+.sp{flex:1}
+.swrap{display:flex;align-items:center;gap:7px}
+.slbl{font-size:9.5px;color:var(--t3)}
+input[type=range]{
+  -webkit-appearance:none;width:72px;height:3px;
+  background:rgba(255,255,255,.10);border-radius:3px;outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;
+  background:rgba(255,255,255,.60);cursor:pointer;transition:background .15s,transform .15s;
+}
+input[type=range]::-webkit-slider-thumb:hover{background:#fff;transform:scale(1.15)}
+
+/* ── Settings ── */
+#stg{
+  position:absolute;inset:0;background:rgba(10,10,20,.97);
+  display:none;flex-direction:column;padding:15px;gap:14px;
+  overflow-y:auto;z-index:10;border-radius:var(--rd);
+}
+#stg.open{display:flex}
+.sh{display:flex;align-items:center;justify-content:space-between}
+.st{font-size:10.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--t2)}
+.ssec{display:flex;flex-direction:column;gap:9px}
+.ssec-t{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600}
+.srow{display:flex;flex-direction:column;gap:4px}
+.srow label{font-size:10.5px;color:var(--t2)}
+.srow input,.srow select{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);
+  border-radius:9px;padding:7px 10px;color:#fff;font-size:11.5px;
+  font-family:inherit;outline:none;width:100%;transition:border-color .15s;
+}
+.srow input:focus,.srow select:focus{border-color:rgba(255,255,255,.22)}
+.srow select option{background:#0e0e18}
+.sapply{
+  padding:9px;border-radius:10px;border:none;background:rgba(255,255,255,.08);
+  color:var(--t1);font-size:11.5px;font-family:inherit;font-weight:500;
+  cursor:pointer;transition:background .15s;width:100%;
+}
+.sapply:hover{background:rgba(255,255,255,.13)}
+.snote{
+  font-size:9.5px;color:var(--t3);line-height:1.7;padding:10px 11px;
+  background:rgba(255,255,255,.025);border-radius:9px;border:1px solid rgba(255,255,255,.05);
+}
+.snote b{color:var(--t2)}
+
+/* ── Lock ── */
+#lko{position:absolute;inset:0;border-radius:var(--rd);display:none;cursor:not-allowed;z-index:9}
+#lko.on{display:block}
+</style>
+</head>
+<body>
+<div id="W">
+  <div id="lko"></div>
+
+  <!-- Header -->
+  <div id="bar">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.7" style="flex-shrink:0">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+    <span class="btitle">WorldClock</span>
+    <div class="bctrl">
+      <button class="ibtn" id="stgBtn" title="设置">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <button class="ibtn" id="lkBtn" title="锁定 / 解锁">
+        <svg id="lkIco" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div id="panels"></div>
+
+  <!-- Footer -->
+  <div id="foot">
+    <div class="mgrp">
+      <button class="mbtn on" data-m="digital">数字</button>
+      <button class="mbtn" data-m="analog">时钟</button>
+      <button class="mbtn" data-m="both">双显</button>
+    </div>
+    <div class="sp"></div>
+    <div class="swrap">
+      <span class="slbl">大小</span>
+      <input type="range" id="sld" min="60" max="190" value="100">
+    </div>
+  </div>
+
+  <!-- Settings panel -->
+  <div id="stg">
+    <div class="sh">
+      <span class="st">设置</span>
+      <button class="ibtn" id="stgX">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="ssec">
+      <div class="ssec-t" id="s0t" style="color:var(--c1)">时钟 1</div>
+      <div class="srow"><label>城市名称</label><input id="n0" type="text" value="Budapest"></div>
+      <div class="srow"><label>时区</label><select id="z0"></select></div>
+    </div>
+    <div class="ssec">
+      <div class="ssec-t" id="s1t" style="color:var(--c2)">时钟 2</div>
+      <div class="srow"><label>城市名称</label><input id="n1" type="text" value="Beijing"></div>
+      <div class="srow"><label>时区</label><select id="z1"></select></div>
+    </div>
+    <button class="sapply" id="sapply">✓ 应用设置</button>
+    <div class="snote">
+      <b>置顶建议：</b>在 Edge 中右上角菜单 → 应用 → 将此页安装为应用，独立窗口后配合 <b>DeskPins</b>（免费）可实现置顶。<br><br>
+      <b>夏令时：</b>由浏览器 Intl API 全自动处理，Budapest 与北京时差会随夏令时自动调整。
+    </div>
+  </div>
+</div>
+
+<script>
+const TZS=[
+  ['Europe/Budapest','Budapest (CET / CEST)'],
+  ['Europe/London','London (GMT / BST)'],
+  ['Europe/Paris','Paris (CET / CEST)'],
+  ['Europe/Berlin','Berlin (CET / CEST)'],
+  ['Europe/Rome','Rome (CET / CEST)'],
+  ['Europe/Amsterdam','Amsterdam (CET / CEST)'],
+  ['Europe/Vienna','Vienna (CET / CEST)'],
+  ['Europe/Warsaw','Warsaw (CET / CEST)'],
+  ['Europe/Stockholm','Stockholm (CET / CEST)'],
+  ['Europe/Athens','Athens (EET / EEST)'],
+  ['Europe/Helsinki','Helsinki (EET / EEST)'],
+  ['Europe/Bucharest','Bucharest (EET / EEST)'],
+  ['Europe/Moscow','Moscow (MSK)'],
+  ['Europe/Istanbul','Istanbul (TRT)'],
+  ['Asia/Shanghai','Beijing / Shanghai (CST)'],
+  ['Asia/Tokyo','Tokyo (JST)'],
+  ['Asia/Seoul','Seoul (KST)'],
+  ['Asia/Singapore','Singapore (SGT)'],
+  ['Asia/Hong_Kong','Hong Kong (HKT)'],
+  ['Asia/Taipei','Taipei (CST)'],
+  ['Asia/Kolkata','India (IST)'],
+  ['Asia/Dubai','Dubai (GST)'],
+  ['Asia/Bangkok','Bangkok (ICT)'],
+  ['Asia/Jakarta','Jakarta (WIB)'],
+  ['Asia/Karachi','Pakistan (PKT)'],
+  ['Asia/Ho_Chi_Minh','Ho Chi Minh (ICT)'],
+  ['Asia/Manila','Manila (PHT)'],
+  ['Asia/Kuala_Lumpur','Kuala Lumpur (MYT)'],
+  ['America/New_York','New York (ET)'],
+  ['America/Chicago','Chicago (CT)'],
+  ['America/Denver','Denver (MT)'],
+  ['America/Los_Angeles','Los Angeles (PT)'],
+  ['America/Toronto','Toronto (ET)'],
+  ['America/Sao_Paulo','São Paulo (BRT)'],
+  ['America/Mexico_City','Mexico City (CT)'],
+  ['Australia/Sydney','Sydney (AEST / AEDT)'],
+  ['Pacific/Auckland','Auckland (NZST / NZDT)'],
+  ['Africa/Cairo','Cairo (EET)'],
+  ['Africa/Johannesburg','Johannesburg (SAST)'],
+  ['UTC','UTC / GMT'],
+];
+
+const S={
+  clocks:[
+    {tz:'Europe/Budapest',label:'Budapest',col:'#e8c87a'},
+    {tz:'Asia/Shanghai',  label:'Beijing', col:'#78bfe8'},
+  ],
+  mode:'digital', scale:1.0, locked:false,
+};
+
+const p2=n=>String(Math.max(0,n|0)).padStart(2,'0');
+
+function tzOff(tz){
+  const now=new Date();
+  const a=new Date(now.toLocaleString('en-US',{timeZone:tz}));
+  const b=new Date(now.toLocaleString('en-US',{timeZone:'UTC'}));
+  return (a-b)/3600000;
+}
+
+function tparts(tz){
+  const now=new Date();
+  const g=o=>new Intl.DateTimeFormat('en-US',{timeZone:tz,...o}).format(now);
+  const hh=parseInt(g({hour:'numeric',hour12:false}))%24;
+  const mm=parseInt(g({minute:'numeric'}));
+  const ss=parseInt(g({second:'numeric'}));
+  const dateStr=new Intl.DateTimeFormat('en-GB',{
+    timeZone:tz,weekday:'short',day:'numeric',month:'short'
+  }).format(now);
+  return{hh,mm,ss,ts:`${p2(hh)}:${p2(mm)}:${p2(ss)}`,dateStr};
+}
+
+/* ── Analog SVG ── */
+const NS='http://www.w3.org/2000/svg';
+function attr(e,o){Object.entries(o).forEach(([k,v])=>e.setAttribute(k,v));return e;}
+function svgEl(t,o){return attr(document.createElementNS(NS,t),o);}
+
+function makeSVG(id,col,sz){
+  const svg=svgEl('svg',{width:sz,height:sz,viewBox:'0 0 100 100'});
+  svg.appendChild(svgEl('circle',{cx:50,cy:50,r:47,fill:'rgba(255,255,255,.03)',stroke:'rgba(255,255,255,.08)','stroke-width':1}));
+  for(let i=0;i<60;i++){
+    const a=(i*6-90)*Math.PI/180,major=i%5===0;
+    const r1=major?39.5:43.5,r2=47;
+    svg.appendChild(svgEl('line',{
+      x1:50+r1*Math.cos(a),y1:50+r1*Math.sin(a),
+      x2:50+r2*Math.cos(a),y2:50+r2*Math.sin(a),
+      stroke:major?'rgba(255,255,255,.28)':'rgba(255,255,255,.09)',
+      'stroke-width':major?1.5:.65,'stroke-linecap':'round'
+    }));
+  }
+  const hH=svgEl('line',{id:'hH'+id,x1:50,y1:50,stroke:'rgba(255,255,255,.88)','stroke-width':2.8,'stroke-linecap':'round'});
+  const mH=svgEl('line',{id:'mH'+id,x1:50,y1:50,stroke:'rgba(255,255,255,.78)','stroke-width':1.9,'stroke-linecap':'round'});
+  const sH=svgEl('line',{id:'sH'+id,stroke:col,'stroke-width':1.15,'stroke-linecap':'round'});
+  svg.appendChild(hH);svg.appendChild(mH);svg.appendChild(sH);
+  svg.appendChild(svgEl('circle',{cx:50,cy:50,r:2.8,fill:col}));
+  return svg;
+}
+
+function updHands(id,hh,mm,ss){
+  const ha=((hh%12+mm/60+ss/3600)*30-90)*Math.PI/180;
+  const ma=((mm+ss/60)*6-90)*Math.PI/180;
+  const sa=(ss*6-90)*Math.PI/180;
+  const h=document.getElementById('hH'+id);
+  const m=document.getElementById('mH'+id);
+  const s=document.getElementById('sH'+id);
+  if(!h)return;
+  h.setAttribute('x2',50+27*Math.cos(ha));h.setAttribute('y2',50+27*Math.sin(ha));
+  m.setAttribute('x2',50+37*Math.cos(ma));m.setAttribute('y2',50+37*Math.sin(ma));
+  s.setAttribute('x1',50-9*Math.cos(sa)); s.setAttribute('y1',50-9*Math.sin(sa));
+  s.setAttribute('x2',50+40*Math.cos(sa));s.setAttribute('y2',50+40*Math.sin(sa));
+}
+
+/* ── Render ── */
+function render(){
+  const wrap=document.getElementById('panels');
+  wrap.innerHTML='';
+  S.clocks.forEach((c,i)=>{
+    const p=document.createElement('div');
+    p.className='cp';
+
+    const lb=document.createElement('div');
+    lb.className='clbl';lb.style.color=c.col;lb.textContent=c.label;p.appendChild(lb);
+
+    const tz=document.createElement('div');
+    tz.className='ctz';tz.textContent=c.tz;p.appendChild(tz);
+
+    if(S.mode==='analog'||S.mode==='both'){
+      const sz=S.mode==='both'?82:112;
+      const w=document.createElement('div');
+      w.style.cssText='margin:4px 0 2px';
+      w.appendChild(makeSVG(i,c.col,sz));p.appendChild(w);
+    }
+
+    if(S.mode==='digital'||S.mode==='both'){
+      const d=document.createElement('div');
+      d.className='cdig';d.id='d'+i;d.style.color=c.col;
+      d.style.fontSize=S.mode==='both'?'21px':'34px';
+      d.textContent='--:--:--';p.appendChild(d);
+    }
+
+    const dt=document.createElement('div');
+    dt.className='cdt';dt.id='dt'+i;p.appendChild(dt);
+
+    const df=document.createElement('div');
+    df.className='cdiff';df.id='df'+i;p.appendChild(df);
+
+    wrap.appendChild(p);
+  });
+  tick();
+}
+
+function tick(){
+  const offs=S.clocks.map(c=>tzOff(c.tz));
+  S.clocks.forEach((c,i)=>{
+    const pt=tparts(c.tz);
+    const d=document.getElementById('d'+i);
+    if(d)d.textContent=pt.ts;
+    const dt=document.getElementById('dt'+i);
+    if(dt)dt.textContent=pt.dateStr;
+    updHands(i,pt.hh,pt.mm,pt.ss);
+    const df=document.getElementById('df'+i);
+    if(df&&S.clocks.length>1){
+      const j=i===0?1:0;
+      const dv=offs[i]-offs[j];
+      if(dv===0){df.textContent='同一时区';}
+      else{
+        const abs=Math.abs(dv),h=Math.floor(abs),m=Math.round((abs-h)*60);
+        const ms=m>0?':'+p2(m):'';
+        df.textContent=`${dv>0?'+':'-'}${h}${ms}h · 相对 ${S.clocks[j].label}`;
+      }
+    }
+  });
+}
+
+/* ── Mode ── */
+document.querySelectorAll('.mbtn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(S.locked)return;
+    S.mode=btn.dataset.m;
+    document.querySelectorAll('.mbtn').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    render();
+  });
+});
+
+/* ── Scale ── */
+const W=document.getElementById('W');
+document.getElementById('sld').addEventListener('input',function(){
+  S.scale=this.value/100;
+  W.style.transform=`scale(${S.scale})`;
+});
+
+/* ── Drag ── */
+let drag=false,dox=0,doy=0;
+document.getElementById('bar').addEventListener('mousedown',e=>{
+  if(S.locked||e.target.closest('.ibtn'))return;
+  drag=true;
+  const r=W.getBoundingClientRect();
+  dox=e.clientX-r.left;doy=e.clientY-r.top;
+  e.preventDefault();
+});
+document.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  W.style.left=(e.clientX-dox)+'px';W.style.top=(e.clientY-doy)+'px';
+});
+document.addEventListener('mouseup',()=>drag=false);
+
+window.addEventListener('load',()=>{
+  const r=W.getBoundingClientRect();
+  W.style.left=Math.max(20,(innerWidth-r.width)/2)+'px';
+  W.style.top =Math.max(20,(innerHeight-r.height)/2)+'px';
+});
+
+/* ── Lock ── */
+document.getElementById('lkBtn').addEventListener('click',()=>{
+  S.locked=!S.locked;
+  document.getElementById('lko').classList.toggle('on',S.locked);
+  document.getElementById('lkBtn').classList.toggle('on',S.locked);
+  document.getElementById('bar').style.cursor=S.locked?'default':'move';
+  document.getElementById('lkIco').innerHTML=S.locked
+    ?'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>'
+    :'<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0"/>';
+});
+
+/* ── Settings ── */
+function initSels(){
+  ['z0','z1'].forEach((id,i)=>{
+    const sel=document.getElementById(id);
+    TZS.forEach(([v,l])=>{
+      const o=document.createElement('option');
+      o.value=v;o.textContent=l;
+      if(v===S.clocks[i].tz)o.selected=true;
+      sel.appendChild(o);
+    });
+  });
+}
+document.getElementById('stgBtn').addEventListener('click',()=>
+  document.getElementById('stg').classList.toggle('open'));
+document.getElementById('stgX').addEventListener('click',()=>
+  document.getElementById('stg').classList.remove('open'));
+document.getElementById('sapply').addEventListener('click',()=>{
+  S.clocks[0].label=document.getElementById('n0').value.trim()||'Clock 1';
+  S.clocks[0].tz=document.getElementById('z0').value;
+  S.clocks[1].label=document.getElementById('n1').value.trim()||'Clock 2';
+  S.clocks[1].tz=document.getElementById('z1').value;
+  document.getElementById('stg').classList.remove('open');
+  render();
+});
+
+/* ── Boot ── */
+initSels();
+render();
+setInterval(tick,1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorldClock</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="theme-dark">
+
+  <!-- 顶栏：拖动区 + 控制按钮 -->
+  <div id="bar" data-tauri-drag-region>
+    <span id="app-title" data-tauri-drag-region>WorldClock</span>
+    <div id="bar-controls">
+      <button id="btn-settings" title="设置">⚙</button>
+      <button id="btn-lock" title="锁定">🔓</button>
+      <button id="btn-hide" title="最小化到托盘">—</button>
+    </div>
+  </div>
+
+  <!-- 锁定遮罩（z-index < 顶栏） -->
+  <div id="lock-overlay" class="hidden">
+    <span>🔒 已锁定</span>
+  </div>
+
+  <!-- 主内容区 -->
+  <div id="main">
+    <!-- 时钟 1：Budapest -->
+    <div class="clock-card" id="card-1">
+      <div class="city-label" id="label-1">Budapest</div>
+
+      <!-- 数字时钟 -->
+      <div class="digital-time" id="digital-1">00:00:00</div>
+      <div class="digital-date" id="date-1">Mon, 01 Jan</div>
+
+      <!-- 模拟时钟 SVG -->
+      <svg class="analog-clock" id="analog-1" viewBox="0 0 200 200">
+        <circle class="clock-face" cx="100" cy="100" r="95"/>
+        <g id="ticks-1"></g>
+        <line class="hand hour-hand"   id="hour-1"   x1="100" y1="100" x2="100" y2="45"/>
+        <line class="hand minute-hand" id="minute-1" x1="100" y1="100" x2="100" y2="30"/>
+        <line class="hand second-hand" id="second-1" x1="100" y1="110" x2="100" y2="20"/>
+        <circle class="center-dot" cx="100" cy="100" r="4"/>
+      </svg>
+
+      <div class="offset-label" id="offset-1"></div>
+    </div>
+
+    <!-- 时钟 2：Beijing -->
+    <div class="clock-card" id="card-2">
+      <div class="city-label" id="label-2">Beijing</div>
+
+      <div class="digital-time" id="digital-2">00:00:00</div>
+      <div class="digital-date" id="date-2">Mon, 01 Jan</div>
+
+      <svg class="analog-clock" id="analog-2" viewBox="0 0 200 200">
+        <circle class="clock-face" cx="100" cy="100" r="95"/>
+        <g id="ticks-2"></g>
+        <line class="hand hour-hand"   id="hour-2"   x1="100" y1="100" x2="100" y2="45"/>
+        <line class="hand minute-hand" id="minute-2" x1="100" y1="100" x2="100" y2="30"/>
+        <line class="hand second-hand" id="second-2" x1="100" y1="110" x2="100" y2="20"/>
+        <circle class="center-dot" cx="100" cy="100" r="4"/>
+      </svg>
+
+      <div class="offset-label" id="offset-2"></div>
+    </div>
+  </div>
+
+  <!-- 底部模式切换 -->
+  <div id="mode-bar">
+    <button class="mode-btn active" data-mode="digital">数字</button>
+    <button class="mode-btn" data-mode="analog">时钟</button>
+    <button class="mode-btn" data-mode="both">双显</button>
+  </div>
+
+  <!-- 设置面板 -->
+  <div id="settings-panel" class="hidden">
+    <h3>设置</h3>
+
+    <section>
+      <label>时钟 1 城市名</label>
+      <input type="text" id="set-label-1" value="Budapest" />
+      <label>时区</label>
+      <select id="set-tz-1"></select>
+    </section>
+
+    <section>
+      <label>时钟 2 城市名</label>
+      <input type="text" id="set-label-2" value="Beijing" />
+      <label>时区</label>
+      <select id="set-tz-2"></select>
+    </section>
+
+    <section>
+      <label>主题</label>
+      <div class="radio-group">
+        <label><input type="radio" name="theme" value="dark" checked /> 深色</label>
+        <label><input type="radio" name="theme" value="light" /> 浅色</label>
+      </div>
+    </section>
+
+    <section>
+      <label class="toggle-label">
+        <input type="checkbox" id="set-ontop" checked />
+        始终置顶
+      </label>
+      <label class="toggle-label">
+        <input type="checkbox" id="set-autostart" />
+        开机自启
+      </label>
+    </section>
+
+    <section>
+      <label>缩放 <span id="scale-val">100</span>%</label>
+      <input type="range" id="set-scale" min="60" max="200" value="100" />
+    </section>
+
+    <div class="settings-actions">
+      <button id="btn-apply">应用</button>
+      <button id="btn-cancel">取消</button>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

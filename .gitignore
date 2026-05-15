@@ -1,0 +1,3 @@
+node_modules/
+.claude/
+src-tauri/target/
