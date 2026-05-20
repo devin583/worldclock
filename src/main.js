@@ -34,8 +34,13 @@ const DEFAULT_CONFIG = {
 
 let config = { ...DEFAULT_CONFIG };
 
+const BASE_WIDTH = 416;
+const MODE_HEIGHTS = { digital: 200, analog: 260, both: 270 };
+
 /* ── DOM refs ── */
 const body           = document.body;
+const dragBar        = document.getElementById('bar');
+const appTitle       = document.getElementById('app-title');
 const lockOverlay    = document.getElementById('lock-overlay');
 const btnLock        = document.getElementById('btn-lock');
 const btnSettings    = document.getElementById('btn-settings');
@@ -145,6 +150,21 @@ function tick() {
   }
 }
 
+/* ── 窗口尺寸和内容缩放 ── */
+function applyWindowLayout() {
+  const baseHeight = MODE_HEIGHTS[config.mode] ?? MODE_HEIGHTS.digital;
+  const scale = Number.isFinite(config.scale) ? config.scale : DEFAULT_CONFIG.scale;
+  const width = Math.round(BASE_WIDTH * scale);
+  const height = Math.round(baseHeight * scale);
+
+  document.documentElement.style.setProperty('--app-height', `${baseHeight}px`);
+  document.documentElement.style.setProperty('--app-scale', String(scale));
+
+  if (isTauri) {
+    invoke('resize_window', { width, height });
+  }
+}
+
 /* ── 应用显示模式 ── */
 function applyMode(mode) {
   config.mode = mode;
@@ -153,16 +173,14 @@ function applyMode(mode) {
     c.classList.add(`mode-${mode}`);
   });
   modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-
-  /* 窗口高度：analog 或 both 需要更高 */
-  const heights = { digital: 200, analog: 260, both: 270 };
-  if (isTauri) invoke('resize_window', { height: heights[mode] ?? 200 });
+  applyWindowLayout();
 }
 
 /* ── 应用主题 ── */
 function applyTheme(theme) {
   config.theme = theme;
-  body.className = `theme-${theme}`;
+  body.classList.remove('theme-dark', 'theme-light');
+  body.classList.add(`theme-${theme}`);
   if (isTauri) invoke('set_theme', { theme });
 }
 
@@ -170,6 +188,12 @@ function applyTheme(theme) {
 function applyLock(locked) {
   config.locked = locked;
   lockOverlay.classList.toggle('hidden', !locked);
+  body.classList.toggle('is-locked', locked);
+  [dragBar, appTitle].forEach(el => {
+    if (!el) return;
+    if (locked) el.removeAttribute('data-tauri-drag-region');
+    else el.setAttribute('data-tauri-drag-region', '');
+  });
   btnLock.textContent = locked ? '🔒' : '🔓';
   btnLock.title = locked ? '解锁' : '锁定';
   if (isTauri) invoke('set_locked', { locked });
@@ -236,15 +260,18 @@ async function applySettings() {
   if (isTauri) {
     invoke('set_always_on_top', { on_top: config.on_top });
     invoke('set_autostart', { enabled: config.autostart });
-    invoke('set_scale', { scale: config.scale });
   }
+  applyWindowLayout();
 
   await saveConfig();
   closeSettings();
 }
 
 /* ── 事件绑定 ── */
-btnLock.addEventListener('click', () => applyLock(!config.locked));
+btnLock.addEventListener('click', async () => {
+  applyLock(!config.locked);
+  await saveConfig();
+});
 
 btnSettings.addEventListener('click', () => {
   if (settingsPanel.classList.contains('hidden')) openSettings();
@@ -269,12 +296,18 @@ document.getElementById('set-scale').addEventListener('input', e => {
 
 /* ── Tauri 事件监听（来自托盘） ── */
 if (isTauri) {
-  window.__TAURI__.event.listen('tray-toggle-lock', () => applyLock(!config.locked));
-  window.__TAURI__.event.listen('tray-set-theme',   e  => applyTheme(e.payload));
-  window.__TAURI__.event.listen('tray-toggle-ontop', () => {
+  window.__TAURI__.event.listen('tray-toggle-lock', async () => {
+    applyLock(!config.locked);
+    await saveConfig();
+  });
+  window.__TAURI__.event.listen('tray-set-theme', async e => {
+    applyTheme(e.payload);
+    await saveConfig();
+  });
+  window.__TAURI__.event.listen('tray-toggle-ontop', async () => {
     config.on_top = !config.on_top;
     invoke('set_always_on_top', { on_top: config.on_top });
-    saveConfig();
+    await saveConfig();
   });
 }
 
@@ -294,7 +327,6 @@ async function init() {
 
   if (isTauri) {
     invoke('set_always_on_top', { on_top: config.on_top });
-    if (config.scale !== 1.0) invoke('set_scale', { scale: config.scale });
   }
 
   tick();

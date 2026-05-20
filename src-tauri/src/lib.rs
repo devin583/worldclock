@@ -1,3 +1,4 @@
+#[cfg(target_os = "windows")]
 mod tray;
 
 use tauri::{AppHandle, Manager, WebviewWindow};
@@ -16,11 +17,8 @@ fn set_always_on_top(window: WebviewWindow, on_top: bool) {
 }
 
 #[tauri::command]
-fn set_locked(window: WebviewWindow, locked: bool) {
-    // 锁定时禁用拖动：通过忽略鼠标事件实现（遮罩层在前端控制）
-    // Tauri 的 set_ignore_cursor_events 仅在锁定且需要点透时使用
-    let _ = window.set_ignore_cursor_events(false); // 始终保持可交互
-    let _ = locked; // 锁定逻辑由前端遮罩层处理
+fn set_locked(_window: WebviewWindow, locked: bool) {
+    let _ = locked;
 }
 
 #[tauri::command]
@@ -30,22 +28,10 @@ fn set_theme(_app: AppHandle, theme: String) {
 }
 
 #[tauri::command]
-fn resize_window(window: WebviewWindow, height: u32) {
+fn resize_window(window: WebviewWindow, width: u32, height: u32) {
     let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width: 416,
+        width,
         height,
-    }));
-}
-
-#[tauri::command]
-fn set_scale(window: WebviewWindow, scale: f64) {
-    let base_w = 416_f64;
-    let base_h = 200_f64;
-    let w = (base_w * scale).round() as u32;
-    let h = (base_h * scale).round() as u32;
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width: w,
-        height: h,
     }));
 }
 
@@ -89,8 +75,10 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .setup(|app| {
-            tray::setup_tray(app.handle())?;
+        .setup(|_app| {
+            #[cfg(target_os = "windows")]
+            tray::setup_tray(_app.handle())?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -99,7 +87,6 @@ pub fn run() {
             set_locked,
             set_theme,
             resize_window,
-            set_scale,
             set_autostart,
             save_config,
             load_config,
