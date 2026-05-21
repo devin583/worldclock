@@ -1,4 +1,5 @@
 /* ── Tauri API shim：浏览器预览时降级为 no-op ── */
+window.__worldClockMainStarted = true;
 window.__worldClockMainLoaded = false;
 
 const tauriApi = window.__TAURI__ ?? {};
@@ -7,7 +8,14 @@ const tauriListen = tauriApi.event?.listen;
 const isTauri = typeof tauriInvoke === 'function';
 
 const invoke = typeof tauriInvoke === 'function'
-  ? tauriInvoke
+  ? async (cmd, args) => {
+      try {
+        return await tauriInvoke(cmd, args);
+      } catch (error) {
+        console.warn('[invoke failed]', cmd, error);
+        return null;
+      }
+    }
   : async (cmd, args) => { console.log('[invoke noop]', cmd, args); return null; };
 
 const listen = typeof tauriListen === 'function'
@@ -203,13 +211,8 @@ function applyTheme(theme) {
 /* ── 锁定 ── */
 function applyLock(locked) {
   config.locked = locked;
-  lockOverlay.classList.toggle('hidden', !locked);
+  lockOverlay.classList.add('hidden');
   body.classList.toggle('is-locked', locked);
-  [dragRegion].forEach(el => {
-    if (!el) return;
-    if (locked) el.removeAttribute('data-tauri-drag-region');
-    else el.setAttribute('data-tauri-drag-region', '');
-  });
   btnLock.textContent = locked ? '🔒' : '🔓';
   btnLock.title = locked ? '解锁' : '锁定';
   if (isTauri) invoke('set_locked', { locked });
@@ -317,16 +320,16 @@ document.getElementById('set-scale').addEventListener('input', e => {
 
 /* ── Tauri 事件监听（来自托盘） ── */
 if (isTauri) {
-  listen('tray-toggle-lock', async () => {
-    applyLock(!config.locked);
+  listen('tray-set-lock', async e => {
+    applyLock(Boolean(e.payload));
     await saveConfig();
   });
   listen('tray-set-theme', async e => {
     applyTheme(e.payload);
     await saveConfig();
   });
-  listen('tray-toggle-ontop', async () => {
-    config.on_top = !config.on_top;
+  listen('tray-set-ontop', async e => {
+    config.on_top = Boolean(e.payload);
     invoke('set_always_on_top', { on_top: config.on_top });
     await saveConfig();
   });

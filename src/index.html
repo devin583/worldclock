@@ -10,7 +10,7 @@
 
   <!-- 顶栏：拖动区 + 控制按钮 -->
   <div id="bar">
-    <div id="drag-region" data-tauri-drag-region>
+    <div id="drag-region">
       <span id="app-title">WorldClock</span>
     </div>
     <div id="bar-controls">
@@ -141,11 +141,18 @@
   <script src="main.js"></script>
   <script>
     setTimeout(() => {
-      if (window.__worldClockMainLoaded) return;
+      if (window.__worldClockMainStarted) return;
 
       const tauriInvoke = window.__TAURI__?.core?.invoke;
       const invoke = typeof tauriInvoke === 'function'
-        ? tauriInvoke
+        ? async (cmd, args) => {
+          try {
+            return await tauriInvoke(cmd, args);
+          } catch (error) {
+            console.warn('[fallback invoke failed]', cmd, error);
+            return null;
+          }
+        }
         : async () => null;
       const isTauri = typeof tauriInvoke === 'function';
 
@@ -248,10 +255,8 @@
       function setLock(locked) {
         config.locked = locked;
         document.body.classList.toggle('is-locked', locked);
-        lockOverlay.classList.toggle('hidden', !locked);
+        lockOverlay.classList.add('hidden');
         btnLock.textContent = locked ? '🔒' : '🔓';
-        if (locked) dragRegion.removeAttribute('data-tauri-drag-region');
-        else dragRegion.setAttribute('data-tauri-drag-region', '');
       }
 
       function tickFallback() {

@@ -139,19 +139,8 @@ body.is-locked #drag-region:active {
 
 /* ── 锁定遮罩 ── */
 #lock-overlay {
-  position: absolute;
-  inset: 0;
-  background: var(--overlay-bg);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5;   /* < 顶栏 z-index:10 */
-  font-size: 13px;
-  color: var(--text-secondary);
-  backdrop-filter: blur(2px);
+  display: none;
 }
-#lock-overlay.hidden { display: none; }
 
 /* ── 主内容区 ── */
 #main {
@@ -227,7 +216,7 @@ body.is-locked #drag-region:active {
 .hand {
   stroke-linecap: round;
   transform-origin: 100px 100px;
-  transition: transform 0.2s cubic-bezier(0.4, 2.08, 0.55, 0.44);
+  transition: none;
 }
 .hour-hand   { stroke: var(--hand-hour);   stroke-width: 6; }
 .minute-hand { stroke: var(--hand-minute); stroke-width: 4; }
