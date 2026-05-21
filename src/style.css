@@ -207,19 +207,11 @@ body.is-locked #drag-region:active {
   container-type: size;
 }
 
-.clock-card + .clock-card {
-  border-left: 1px solid var(--divider);
-}
-
-.clock-card.mode-digital + .clock-card.mode-digital {
-  border-left: 0;
-}
-
-#card-1.mode-digital {
+#card-1 {
   padding-right: clamp(18px, 7cqw, 34px);
 }
 
-#card-2.mode-digital {
+#card-2 {
   padding-left: clamp(18px, 7cqw, 34px);
 }
 
