@@ -77,7 +77,9 @@ pub fn run() {
         ))
         .setup(|_app| {
             #[cfg(target_os = "windows")]
-            tray::setup_tray(_app.handle())?;
+            if let Err(err) = tray::setup_tray(_app.handle()) {
+                eprintln!("tray setup failed: {err}");
+            }
 
             Ok(())
         })

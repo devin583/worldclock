@@ -21,8 +21,13 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         &ontop, &sep3, &quit,
     ])?;
 
+    let Some(icon) = app.default_window_icon() else {
+        eprintln!("tray setup skipped: default window icon is unavailable");
+        return Ok(());
+    };
+
     TrayIconBuilder::new()
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(icon.clone())
         .menu(&menu)
         .tooltip("WorldClock")
         .on_menu_event(|app, event| match event.id().as_ref() {
