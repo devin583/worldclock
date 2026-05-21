@@ -111,19 +111,33 @@ fn hide_window(window: WebviewWindow) {
 }
 
 #[tauri::command]
-fn set_always_on_top(window: WebviewWindow, on_top: bool) {
-    let _ = window.set_always_on_top(on_top);
+fn set_window_on_top(app: AppHandle, window: WebviewWindow, enabled: bool) {
+    let _ = window.set_always_on_top(enabled);
+
+    #[cfg(target_os = "windows")]
+    tray::set_ontop_checked(&app, enabled);
+
+    #[cfg(not(target_os = "windows"))]
+    let _ = app;
 }
 
 #[tauri::command]
-fn set_locked(_window: WebviewWindow, locked: bool) {
-    let _ = locked;
+fn set_locked(app: AppHandle, locked: bool) {
+    #[cfg(target_os = "windows")]
+    tray::set_lock_checked(&app, locked);
+
+    #[cfg(not(target_os = "windows"))]
+    let _ = (app, locked);
 }
 
 #[tauri::command]
-fn set_theme(_app: AppHandle, theme: String) {
+fn set_theme(app: AppHandle, theme: String) {
     // 主题切换纯前端处理，此处预留给未来系统级处理
-    let _ = theme;
+    #[cfg(target_os = "windows")]
+    tray::set_theme_checked(&app, &theme);
+
+    #[cfg(not(target_os = "windows"))]
+    let _ = (app, theme);
 }
 
 #[tauri::command]
@@ -154,7 +168,41 @@ async fn load_config(app: AppHandle) -> Result<Option<serde_json::Value>, String
 
 #[tauri::command]
 async fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
-    let _ = (app, enabled);
+    let _ = app;
+    set_autostart_enabled(enabled)?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn set_autostart_enabled(enabled: bool) -> Result<(), String> {
+    let run_key = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run";
+    let status = if enabled {
+        let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+        let exe = exe
+            .to_str()
+            .ok_or_else(|| "executable path is not valid UTF-8".to_string())?;
+        std::process::Command::new("reg")
+            .args(["add", run_key, "/v", "WorldClock", "/t", "REG_SZ", "/d"])
+            .arg(exe)
+            .args(["/f"])
+            .status()
+            .map_err(|e| e.to_string())?
+    } else {
+        std::process::Command::new("reg")
+            .args(["delete", run_key, "/v", "WorldClock", "/f"])
+            .status()
+            .map_err(|e| e.to_string())?
+    };
+
+    if enabled && !status.success() {
+        return Err(format!("reg command failed with status {status}"));
+    }
+
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn set_autostart_enabled(_enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
@@ -199,7 +247,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             hide_window,
-            set_always_on_top,
+            set_window_on_top,
             set_locked,
             set_theme,
             start_dragging,

@@ -83,15 +83,17 @@
       <label>时钟 1 城市名</label>
       <input type="text" id="set-label-1" value="Budapest" />
       <label>时区</label>
-      <select id="set-tz-1"></select>
+      <input type="text" id="set-tz-1" list="timezone-options" value="Europe/Budapest" />
     </section>
 
     <section>
       <label>时钟 2 城市名</label>
       <input type="text" id="set-label-2" value="Beijing" />
       <label>时区</label>
-      <select id="set-tz-2"></select>
+      <input type="text" id="set-tz-2" list="timezone-options" value="Asia/Shanghai" />
     </section>
+
+    <datalist id="timezone-options"></datalist>
 
     <section>
       <label>主题</label>
@@ -185,15 +187,22 @@
         theme: 'dark'
       };
 
-      function populateTzSelect(select, current) {
-        select.innerHTML = '';
+      function populateTimezoneOptions() {
+        const datalist = document.getElementById('timezone-options');
+        datalist.innerHTML = '';
         TIMEZONES.forEach(tz => {
           const option = document.createElement('option');
           option.value = tz;
-          option.textContent = tz;
-          option.selected = tz === current;
-          select.appendChild(option);
+          datalist.appendChild(option);
         });
+      }
+
+      function resolveTimezone(value, fallback) {
+        const query = value.trim().toLowerCase();
+        if (!query) return fallback;
+        return TIMEZONES.find(tz => tz.toLowerCase() === query)
+          || TIMEZONES.find(tz => tz.toLowerCase().includes(query))
+          || fallback;
       }
 
       function drawTicks(groupId) {
@@ -228,6 +237,11 @@
         config.theme = theme;
         document.body.classList.remove('theme-dark', 'theme-light');
         document.body.classList.add(`theme-${theme}`);
+      }
+
+      function applyOnTop(enabled) {
+        config.on_top = enabled;
+        if (isTauri) invoke('set_window_on_top', { enabled });
       }
 
       function setMode(mode) {
@@ -278,10 +292,11 @@
       }
 
       function openSettings() {
-        populateTzSelect(document.getElementById('set-tz-1'), config.clocks[0].tz);
-        populateTzSelect(document.getElementById('set-tz-2'), config.clocks[1].tz);
+        populateTimezoneOptions();
         document.getElementById('set-label-1').value = config.clocks[0].label;
         document.getElementById('set-label-2').value = config.clocks[1].label;
+        document.getElementById('set-tz-1').value = config.clocks[0].tz;
+        document.getElementById('set-tz-2').value = config.clocks[1].tz;
         document.querySelectorAll('input[name="theme"]').forEach(input => {
           input.checked = input.value === config.theme;
         });
@@ -291,14 +306,19 @@
 
       function applySettings() {
         config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Budapest';
-        config.clocks[0].tz = document.getElementById('set-tz-1').value;
+        config.clocks[0].tz = resolveTimezone(
+          document.getElementById('set-tz-1').value,
+          config.clocks[0].tz
+        );
         config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Beijing';
-        config.clocks[1].tz = document.getElementById('set-tz-2').value;
-        config.on_top = document.getElementById('set-ontop').checked;
+        config.clocks[1].tz = resolveTimezone(
+          document.getElementById('set-tz-2').value,
+          config.clocks[1].tz
+        );
+        applyOnTop(document.getElementById('set-ontop').checked);
         setTheme(document.querySelector('input[name="theme"]:checked')?.value || 'dark');
         document.getElementById('label-1').textContent = config.clocks[0].label;
         document.getElementById('label-2').textContent = config.clocks[1].label;
-        if (isTauri) invoke('set_always_on_top', { on_top: config.on_top });
         setMode(config.mode);
         tickFallback();
         settingsPanel.classList.add('hidden');

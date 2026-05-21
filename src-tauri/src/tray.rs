@@ -4,6 +4,29 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+pub struct TrayMenuState {
+    lock: CheckMenuItem,
+    light_mode: CheckMenuItem,
+    dark_mode: CheckMenuItem,
+    ontop: CheckMenuItem,
+}
+
+impl TrayMenuState {
+    fn new(
+        lock: CheckMenuItem,
+        light_mode: CheckMenuItem,
+        dark_mode: CheckMenuItem,
+        ontop: CheckMenuItem,
+    ) -> Self {
+        Self {
+            lock,
+            light_mode,
+            dark_mode,
+            ontop,
+        }
+    }
+}
+
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let show_hide = MenuItem::with_id(app, "show_hide", "显示 / 隐藏", true, None::<&str>)?;
     let lock = CheckMenuItem::with_id(app, "lock", "锁定位置", true, false, None::<&str>)?;
@@ -41,6 +64,13 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let light_item = light_mode.clone();
     let dark_item = dark_mode.clone();
     let ontop_item = ontop.clone();
+
+    app.manage(TrayMenuState::new(
+        lock.clone(),
+        light_mode.clone(),
+        dark_mode.clone(),
+        ontop.clone(),
+    ));
 
     TrayIconBuilder::new()
         .icon(icon.clone())
@@ -85,6 +115,26 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .build(app)?;
 
     Ok(())
+}
+
+pub fn set_lock_checked(app: &AppHandle, checked: bool) {
+    if let Some(state) = app.try_state::<TrayMenuState>() {
+        let _ = state.lock.set_checked(checked);
+    }
+}
+
+pub fn set_theme_checked(app: &AppHandle, theme: &str) {
+    if let Some(state) = app.try_state::<TrayMenuState>() {
+        let is_light = theme == "light";
+        let _ = state.light_mode.set_checked(is_light);
+        let _ = state.dark_mode.set_checked(!is_light);
+    }
+}
+
+pub fn set_ontop_checked(app: &AppHandle, checked: bool) {
+    if let Some(state) = app.try_state::<TrayMenuState>() {
+        let _ = state.ontop.set_checked(checked);
+    }
 }
 
 fn toggle_window(app: &AppHandle) {

@@ -305,8 +305,7 @@ body.is-locked #drag-region:active {
   color: var(--text-secondary);
 }
 
-#settings-panel input[type="text"],
-#settings-panel select {
+#settings-panel input[type="text"] {
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   border-radius: 6px;
@@ -316,8 +315,7 @@ body.is-locked #drag-region:active {
   outline: none;
   width: 100%;
 }
-#settings-panel input[type="text"]:focus,
-#settings-panel select:focus {
+#settings-panel input[type="text"]:focus {
   border-color: var(--accent-1);
 }
 

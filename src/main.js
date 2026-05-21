@@ -71,16 +71,24 @@ const settingsPanel  = document.getElementById('settings-panel');
 const modeBtns       = document.querySelectorAll('.mode-btn');
 const cards          = [document.getElementById('card-1'), document.getElementById('card-2')];
 
-/* ── 填充时区下拉 ── */
-function populateTzSelect(sel, current) {
-  sel.innerHTML = '';
+/* ── 填充时区输入建议 ── */
+function populateTimezoneOptions() {
+  const datalist = document.getElementById('timezone-options');
+  if (!datalist) return;
+  datalist.innerHTML = '';
   TIMEZONES.forEach(tz => {
     const opt = document.createElement('option');
     opt.value = tz;
-    opt.textContent = tz;
-    if (tz === current) opt.selected = true;
-    sel.appendChild(opt);
+    datalist.appendChild(opt);
   });
+}
+
+function resolveTimezone(value, fallback) {
+  const query = value.trim().toLowerCase();
+  if (!query) return fallback;
+  return TIMEZONES.find(tz => tz.toLowerCase() === query)
+    || TIMEZONES.find(tz => tz.toLowerCase().includes(query))
+    || fallback;
 }
 
 /* ── 绘制刻度 ── */
@@ -197,6 +205,11 @@ function applyTheme(theme) {
   if (isTauri) invoke('set_theme', { theme });
 }
 
+function applyOnTop(enabled) {
+  config.on_top = enabled;
+  if (isTauri) invoke('set_window_on_top', { enabled });
+}
+
 /* ── 锁定 ── */
 function applyLock(locked) {
   config.locked = locked;
@@ -227,13 +240,12 @@ async function loadConfig() {
 function openSettings() {
   settingsPanel.classList.remove('hidden');
 
-  const tz1 = document.getElementById('set-tz-1');
-  const tz2 = document.getElementById('set-tz-2');
-  populateTzSelect(tz1, config.clocks[0].tz);
-  populateTzSelect(tz2, config.clocks[1].tz);
+  populateTimezoneOptions();
 
   document.getElementById('set-label-1').value = config.clocks[0].label;
   document.getElementById('set-label-2').value = config.clocks[1].label;
+  document.getElementById('set-tz-1').value = config.clocks[0].tz;
+  document.getElementById('set-tz-2').value = config.clocks[1].tz;
 
   document.querySelectorAll('input[name="theme"]').forEach(r => {
     r.checked = r.value === config.theme;
@@ -248,21 +260,26 @@ function closeSettings() {
 
 async function applySettings() {
   config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Clock 1';
-  config.clocks[0].tz    = document.getElementById('set-tz-1').value;
+  config.clocks[0].tz = resolveTimezone(
+    document.getElementById('set-tz-1').value,
+    config.clocks[0].tz
+  );
   config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Clock 2';
-  config.clocks[1].tz    = document.getElementById('set-tz-2').value;
+  config.clocks[1].tz = resolveTimezone(
+    document.getElementById('set-tz-2').value,
+    config.clocks[1].tz
+  );
 
   const themeVal = document.querySelector('input[name="theme"]:checked')?.value ?? 'dark';
   applyTheme(themeVal);
 
-  config.on_top    = document.getElementById('set-ontop').checked;
+  applyOnTop(document.getElementById('set-ontop').checked);
   config.autostart = document.getElementById('set-autostart').checked;
 
   document.getElementById('label-1').textContent = config.clocks[0].label;
   document.getElementById('label-2').textContent = config.clocks[1].label;
 
   if (isTauri) {
-    invoke('set_always_on_top', { on_top: config.on_top });
     invoke('set_autostart', { enabled: config.autostart });
   }
 
@@ -309,8 +326,7 @@ if (isTauri) {
     await saveConfig();
   });
   listen('tray-set-ontop', async e => {
-    config.on_top = Boolean(e.payload);
-    invoke('set_always_on_top', { on_top: config.on_top });
+    applyOnTop(Boolean(e.payload));
     await saveConfig();
   });
 }
@@ -331,7 +347,7 @@ async function init() {
     applyLock(config.locked);
 
     if (isTauri) {
-      invoke('set_always_on_top', { on_top: config.on_top });
+      invoke('set_window_on_top', { enabled: config.on_top });
     }
 
     tick();
