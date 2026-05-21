@@ -215,7 +215,8 @@ function applyLock(locked) {
   config.locked = locked;
   lockOverlay.classList.add('hidden');
   body.classList.toggle('is-locked', locked);
-  btnLock.textContent = locked ? '🔒' : '🔓';
+  btnLock.classList.toggle('locked', locked);
+  btnLock.setAttribute('aria-label', locked ? '解锁' : '锁定');
   btnLock.title = locked ? '解锁' : '锁定';
   if (isTauri) invoke('set_locked', { locked });
 }

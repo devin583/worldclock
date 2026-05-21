@@ -4,12 +4,14 @@
   --bg:            rgba(14, 14, 24, 0.96);
   --card-bg:       rgba(255, 255, 255, 0.04);
   --card-border:   rgba(255, 255, 255, 0.08);
+  --divider:       rgba(255, 255, 255, 0.075);
   --text-primary:  rgba(255, 255, 255, 0.92);
   --text-secondary:rgba(255, 255, 255, 0.45);
+  --text-muted:    rgba(255, 255, 255, 0.24);
   --accent-1:      #e8c87a;   /* Budapest 暖金 */
   --accent-2:      #78bfe8;   /* Beijing  冷蓝 */
-  --shadow:        0 8px 32px rgba(0, 0, 0, 0.6);
-  --bar-bg:        rgba(255, 255, 255, 0.05);
+  --shadow:        0 20px 56px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --bar-bg:        rgba(255, 255, 255, 0.035);
   --btn-hover:     rgba(255, 255, 255, 0.12);
   --overlay-bg:    rgba(0, 0, 0, 0.55);
   --face-fill:     rgba(255, 255, 255, 0.03);
@@ -28,8 +30,10 @@
   --bg:            rgba(252, 250, 246, 0.98);
   --card-bg:       rgba(0, 0, 0, 0.03);
   --card-border:   rgba(0, 0, 0, 0.08);
+  --divider:       rgba(0, 0, 0, 0.075);
   --text-primary:  rgba(40, 30, 20, 0.92);
   --text-secondary:rgba(40, 30, 20, 0.45);
+  --text-muted:    rgba(40, 30, 20, 0.26);
   --accent-1:      #c86800;   /* Budapest 琥珀 */
   --accent-2:      #006fa0;   /* Beijing  蓝 */
   --shadow:        0 4px 24px rgba(0, 0, 0, 0.12);
@@ -64,7 +68,7 @@ html, body {
 body {
   background: var(--bg);
   color: var(--text-primary);
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
@@ -77,10 +81,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px 4px;
+  padding: 5px 9px 4px;
   background: var(--bar-bg);
-  border-radius: 14px 14px 0 0;
-  height: 30px;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid var(--divider);
+  height: 28px;
   flex-shrink: 0;
   position: relative;
   z-index: 10;   /* 永远高于锁定遮罩 */
@@ -107,8 +112,8 @@ body.is-locked #drag-region:active {
 #app-title {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
   text-transform: uppercase;
 }
 
@@ -118,18 +123,36 @@ body.is-locked #drag-region:active {
 }
 
 #bar-controls button {
-  background: none;
+  background: rgba(255, 255, 255, 0.025);
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  width: 22px;
-  height: 22px;
-  border-radius: 5px;
-  font-size: 13px;
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background 0.15s, color 0.15s;
+}
+
+#bar-controls svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#btn-lock .icon-lock-closed,
+#btn-lock.locked .icon-lock-open {
+  display: none;
+}
+
+#btn-lock.locked .icon-lock-closed {
+  display: block;
 }
 #bar-controls button:hover {
   background: var(--btn-hover);
@@ -145,8 +168,8 @@ body.is-locked #drag-region:active {
 #main {
   flex: 1;
   display: flex;
-  gap: 8px;
-  padding: 6px 12px 4px;
+  gap: 0;
+  padding: 5px 12px 2px;
   min-height: 0;
 }
 
@@ -158,13 +181,17 @@ body.is-locked #drag-region:active {
   align-items: center;
   justify-content: center;
   gap: clamp(2px, 1.2cqh, 8px);
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
   padding: 6px 8px 4px;
   min-width: 0;
   position: relative;
   container-type: size;
+}
+
+.clock-card + .clock-card {
+  border-left: 1px solid var(--divider);
 }
 
 #card-1 .city-label,
@@ -175,15 +202,15 @@ body.is-locked #drag-region:active {
 .city-label {
   font-size: clamp(10px, 4cqh, 18px);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.055em;
   text-transform: uppercase;
 }
 
 .digital-time {
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: clamp(28px, 18cqh, 64px);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+  font-size: clamp(30px, 20cqh, 64px);
+  font-weight: 600;
+  letter-spacing: 0.025em;
   line-height: 1;
 }
 
@@ -196,7 +223,16 @@ body.is-locked #drag-region:active {
 .offset-label {
   font-size: clamp(9px, 3.2cqh, 14px);
   color: var(--text-secondary);
-  margin-top: 1px;
+  margin-top: 2px;
+  min-height: 16px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.035);
+  white-space: nowrap;
+}
+
+.offset-label:empty {
+  visibility: hidden;
 }
 
 /* ── 模拟时钟 SVG ── */
@@ -243,18 +279,23 @@ body.is-locked #drag-region:active {
 #mode-bar {
   display: flex;
   justify-content: center;
-  gap: 4px;
-  padding: 3px 12px 6px;
+  align-self: center;
+  gap: 1px;
+  padding: 2px;
+  margin: 2px 12px 7px;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
   flex-shrink: 0;
 }
 
 .mode-btn {
   background: none;
-  border: 1px solid var(--card-border);
+  border: 0;
   color: var(--text-secondary);
   font-size: 10px;
-  padding: 2px 10px;
-  border-radius: 20px;
+  padding: 3px 10px;
+  border-radius: 6px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
@@ -263,19 +304,17 @@ body.is-locked #drag-region:active {
   color: var(--text-primary);
 }
 .mode-btn.active {
-  background: var(--card-bg);
-  border-color: var(--accent-1);
-  color: var(--accent-1);
+  background: rgba(255, 255, 255, 0.095);
+  color: var(--text-primary);
 }
-#card-2 ~ #mode-bar .mode-btn.active,
-.theme-light .mode-btn.active { border-color: var(--accent-2); color: var(--accent-2); }
+.theme-light .mode-btn.active { background: rgba(0, 0, 0, 0.075); }
 
 /* ── 设置面板（覆盖整个窗口） ── */
 #settings-panel {
   position: absolute;
   inset: 0;
   background: var(--settings-bg);
-  border-radius: 14px;
+  border-radius: 12px;
   z-index: 20;
   padding: 14px 16px 12px;
   overflow-y: auto;

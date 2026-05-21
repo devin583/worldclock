@@ -1,4 +1,5 @@
 use tauri::{
+    image::Image,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager,
@@ -57,10 +58,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         ],
     )?;
 
-    let Some(icon) = app.default_window_icon() else {
-        eprintln!("tray setup skipped: default window icon is unavailable");
-        return Ok(());
-    };
+    let icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
 
     let lock_item = lock.clone();
     let light_item = light_mode.clone();
@@ -75,7 +73,8 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     ));
 
     TrayIconBuilder::new()
-        .icon(icon.clone())
+        .icon(icon)
+        .icon_as_template(true)
         .menu(&menu)
         .tooltip("WorldClock")
         .on_menu_event(move |app, event| match event.id().as_ref() {

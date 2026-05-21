@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260521" />
 </head>
 <body class="theme-dark">
 
@@ -14,9 +14,27 @@
       <span id="app-title">WorldClock</span>
     </div>
     <div id="bar-controls">
-      <button id="btn-settings" title="设置">⚙</button>
-      <button id="btn-lock" title="锁定">🔓</button>
-      <button id="btn-hide" title="最小化到托盘">—</button>
+      <button id="btn-settings" title="设置" aria-label="设置">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 0 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 0 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 0 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 0 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v.1a1.7 1.7 0 0 0 1.5 1h.1a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5.9z"></path>
+        </svg>
+      </button>
+      <button id="btn-lock" title="锁定" aria-label="锁定">
+        <svg class="icon-lock-open" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+          <path d="M8 11V7a4 4 0 0 1 7.7-1.4"></path>
+        </svg>
+        <svg class="icon-lock-closed" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="11" width="14" height="10" rx="2"></rect>
+          <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+        </svg>
+      </button>
+      <button id="btn-hide" title="最小化到托盘" aria-label="最小化到托盘">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h14"></path>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -135,7 +153,7 @@
       if (offset && event?.reason) offset.textContent = String(event.reason).slice(0, 80);
     });
   </script>
-  <script src="main.js"></script>
+  <script src="main.js?v=20260521"></script>
   <script>
     setTimeout(() => {
       if (window.__worldClockMainStarted) return;
@@ -257,7 +275,9 @@
         config.locked = locked;
         document.body.classList.toggle('is-locked', locked);
         lockOverlay.classList.add('hidden');
-        btnLock.textContent = locked ? '🔒' : '🔓';
+        btnLock.classList.toggle('locked', locked);
+        btnLock.setAttribute('aria-label', locked ? '解锁' : '锁定');
+        btnLock.title = locked ? '解锁' : '锁定';
       }
 
       function tickFallback() {
