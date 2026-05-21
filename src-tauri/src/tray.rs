@@ -64,6 +64,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             }
             "toggle_ontop" => {
                 let checked = ontop_item.is_checked().unwrap_or(true);
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_always_on_top(checked);
+                }
                 let _ = app.emit("tray-set-ontop", checked);
             }
             "quit" => app.exit(0),

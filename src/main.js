@@ -1,6 +1,15 @@
-/* ── Tauri API shim：浏览器预览时降级为 no-op ── */
+(() => {
+if (window.__worldClockMainBootstrapped) {
+  window.__worldClockMainStarted = true;
+  window.__worldClockMainLoaded = true;
+  return;
+}
+
+window.__worldClockMainBootstrapped = true;
 window.__worldClockMainStarted = true;
 window.__worldClockMainLoaded = false;
+
+/* ── Tauri API shim：浏览器预览时降级为 no-op ── */
 
 const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
@@ -364,3 +373,4 @@ async function init() {
 }
 
 init();
+})();
