@@ -1,9 +1,16 @@
 /* ── Tauri API shim：浏览器预览时降级为 no-op ── */
-const isTauri = typeof window.__TAURI__ !== 'undefined';
+const tauriApi = window.__TAURI__ ?? {};
+const tauriInvoke = tauriApi.core?.invoke;
+const tauriListen = tauriApi.event?.listen;
+const isTauri = typeof tauriInvoke === 'function';
 
-const invoke = isTauri
-  ? window.__TAURI__.core.invoke
-  : async (cmd, args) => { console.log('[invoke]', cmd, args); return null; };
+const invoke = typeof tauriInvoke === 'function'
+  ? tauriInvoke
+  : async (cmd, args) => { console.log('[invoke noop]', cmd, args); return null; };
+
+const listen = typeof tauriListen === 'function'
+  ? tauriListen
+  : async () => () => {};
 
 /* ── 时区列表 ── */
 const TIMEZONES = [
@@ -39,7 +46,7 @@ const MODE_HEIGHTS = { digital: 200, analog: 260, both: 270 };
 
 /* ── DOM refs ── */
 const body           = document.body;
-const dragBar        = document.getElementById('bar');
+const dragRegion     = document.getElementById('drag-region');
 const appTitle       = document.getElementById('app-title');
 const lockOverlay    = document.getElementById('lock-overlay');
 const btnLock        = document.getElementById('btn-lock');
@@ -95,13 +102,18 @@ function setHand(id, angleDeg) {
 function offsetText(tz1, tz2) {
   const now = new Date();
   const offset = (d, tz) => {
-    const s = new Intl.DateTimeFormat('en', {
-      timeZone: tz, hour: 'numeric', hour12: false, timeZoneName: 'shortOffset'
-    }).formatToParts(d);
-    const tzPart = s.find(p => p.type === 'timeZoneName')?.value ?? 'UTC+0';
-    const m = tzPart.match(/([+-])(\d+)(?::(\d+))?/);
-    if (!m) return 0;
-    return (parseInt(m[2]) + (parseInt(m[3] ?? 0) / 60)) * (m[1] === '+' ? 1 : -1);
+    try {
+      const s = new Intl.DateTimeFormat('en', {
+        timeZone: tz, hour: 'numeric', hour12: false, timeZoneName: 'shortOffset'
+      }).formatToParts(d);
+      const tzPart = s.find(p => p.type === 'timeZoneName')?.value ?? 'UTC+0';
+      const m = tzPart.match(/([+-])(\d+)(?::(\d+))?/);
+      if (!m) return 0;
+      return (parseInt(m[2]) + (parseInt(m[3] ?? 0) / 60)) * (m[1] === '+' ? 1 : -1);
+    } catch (error) {
+      console.warn('offset fallback', tz, error);
+      return 0;
+    }
   };
   const diff = offset(now, tz2) - offset(now, tz1);
   const sign = diff >= 0 ? '+' : '';
@@ -189,7 +201,7 @@ function applyLock(locked) {
   config.locked = locked;
   lockOverlay.classList.toggle('hidden', !locked);
   body.classList.toggle('is-locked', locked);
-  [dragBar, appTitle].forEach(el => {
+  [dragRegion].forEach(el => {
     if (!el) return;
     if (locked) el.removeAttribute('data-tauri-drag-region');
     else el.setAttribute('data-tauri-drag-region', '');
@@ -296,15 +308,15 @@ document.getElementById('set-scale').addEventListener('input', e => {
 
 /* ── Tauri 事件监听（来自托盘） ── */
 if (isTauri) {
-  window.__TAURI__.event.listen('tray-toggle-lock', async () => {
+  listen('tray-toggle-lock', async () => {
     applyLock(!config.locked);
     await saveConfig();
   });
-  window.__TAURI__.event.listen('tray-set-theme', async e => {
+  listen('tray-set-theme', async e => {
     applyTheme(e.payload);
     await saveConfig();
   });
-  window.__TAURI__.event.listen('tray-toggle-ontop', async () => {
+  listen('tray-toggle-ontop', async () => {
     config.on_top = !config.on_top;
     invoke('set_always_on_top', { on_top: config.on_top });
     await saveConfig();
@@ -313,24 +325,29 @@ if (isTauri) {
 
 /* ── 初始化 ── */
 async function init() {
-  await loadConfig();
+  try {
+    await loadConfig();
 
-  drawTicks('ticks-1');
-  drawTicks('ticks-2');
+    drawTicks('ticks-1');
+    drawTicks('ticks-2');
 
-  document.getElementById('label-1').textContent = config.clocks[0].label;
-  document.getElementById('label-2').textContent = config.clocks[1].label;
+    document.getElementById('label-1').textContent = config.clocks[0].label;
+    document.getElementById('label-2').textContent = config.clocks[1].label;
 
-  applyTheme(config.theme);
-  applyMode(config.mode);
-  applyLock(config.locked);
+    applyTheme(config.theme);
+    applyMode(config.mode);
+    applyLock(config.locked);
 
-  if (isTauri) {
-    invoke('set_always_on_top', { on_top: config.on_top });
+    if (isTauri) {
+      invoke('set_always_on_top', { on_top: config.on_top });
+    }
+
+    tick();
+    setInterval(tick, 1000);
+  } catch (error) {
+    console.error('init failed', error);
+    appTitle.textContent = 'WorldClock Error';
   }
-
-  tick();
-  setInterval(tick, 1000);
 }
 
 init();

@@ -81,21 +81,28 @@ body {
   padding: 6px 10px 4px;
   background: var(--bar-bg);
   border-radius: 14px 14px 0 0;
-  cursor: grab;
   height: 30px;
   flex-shrink: 0;
   position: relative;
   z-index: 10;   /* 永远高于锁定遮罩 */
 }
-#bar:active { cursor: grabbing; }
 
-body.is-locked #bar,
-body.is-locked #bar:active {
-  cursor: not-allowed;
+#drag-region {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  cursor: grab;
 }
 
-body.is-locked #app-title {
-  pointer-events: none;
+#drag-region:active {
+  cursor: grabbing;
+}
+
+body.is-locked #drag-region,
+body.is-locked #drag-region:active {
+  cursor: not-allowed;
 }
 
 #app-title {
