@@ -7,8 +7,6 @@ use std::{
     path::PathBuf,
 };
 use tauri::{AppHandle, Manager, WebviewWindow};
-#[cfg(target_os = "macos")]
-use tauri_plugin_autostart::MacosLauncher;
 
 fn startup_log_path() -> PathBuf {
     std::env::temp_dir().join("worldclock-startup.log")
@@ -78,22 +76,8 @@ async fn load_config(app: AppHandle) -> Result<Option<serde_json::Value>, String
 
 #[tauri::command]
 async fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
-    #[cfg(target_os = "macos")]
-    {
-        use tauri_plugin_autostart::ManagerExt;
-        let mgr = app.autolaunch();
-        if enabled {
-            mgr.enable().map_err(|e| e.to_string())
-        } else {
-            mgr.disable().map_err(|e| e.to_string())
-        }
-    }
-
-    #[cfg(not(target_os = "macos"))]
-    {
-        let _ = (app, enabled);
-        Ok(())
-    }
+    let _ = (app, enabled);
+    Ok(())
 }
 
 /* ── 应用入口 ── */
@@ -104,17 +88,7 @@ pub fn run() {
 
     log_startup("run() entered");
 
-    let builder = tauri::Builder::default();
-    #[cfg(target_os = "macos")]
-    let builder = builder.plugin(tauri_plugin_autostart::init(
-        MacosLauncher::LaunchAgent,
-        Some(vec![]),
-    ));
-
-    #[cfg(not(target_os = "macos"))]
-    let builder = builder;
-
-    builder
+    tauri::Builder::default()
         .setup(|_app| {
             log_startup("setup() entered");
 

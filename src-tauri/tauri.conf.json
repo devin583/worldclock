@@ -25,11 +25,6 @@
       }
     ]
   },
-  "plugins": {
-    "autostart": {
-      "macosExtraArgs": []
-    }
-  },
   "bundle": {
     "active": true,
     "targets": "all",

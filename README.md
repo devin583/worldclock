@@ -45,10 +45,10 @@ npm run dev
 
 常见产物位置：
 
-- `src-tauri/target/release/bundle/nsis/*.exe`
-- `src-tauri/target/release/bundle/msi/*.msi`
+- `dist/worldclock-portable.zip`
+- `dist/worldclock.exe`
 
-建议优先把安装包发给内网机器，不要直接分发 `target/release/worldclock.exe` 这类裸可执行文件。
+建议优先分发 `worldclock-portable.zip`。目标机解压后直接运行 `worldclock.exe`，不需要安装流程。
 
 ## 本地 Windows 打包
 

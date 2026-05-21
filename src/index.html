@@ -123,6 +123,108 @@
     </div>
   </div>
 
+  <script>
+    window.addEventListener('error', event => {
+      const title = document.getElementById('app-title');
+      const offset = document.getElementById('offset-1');
+      if (title) title.textContent = 'WorldClock JS Error';
+      if (offset && event?.message) offset.textContent = String(event.message).slice(0, 80);
+    });
+
+    window.addEventListener('unhandledrejection', event => {
+      const title = document.getElementById('app-title');
+      const offset = document.getElementById('offset-1');
+      if (title) title.textContent = 'WorldClock Promise Error';
+      if (offset && event?.reason) offset.textContent = String(event.reason).slice(0, 80);
+    });
+  </script>
   <script src="main.js"></script>
+  <script>
+    setTimeout(() => {
+      if (window.__worldClockMainLoaded) return;
+
+      const title = document.getElementById('app-title');
+      if (title) title.textContent = 'WorldClock Fallback';
+
+      const modeBtns = document.querySelectorAll('.mode-btn');
+      const cards = [document.getElementById('card-1'), document.getElementById('card-2')];
+      const dragRegion = document.getElementById('drag-region');
+      const lockOverlay = document.getElementById('lock-overlay');
+      const settingsPanel = document.getElementById('settings-panel');
+      const btnLock = document.getElementById('btn-lock');
+      const btnSettings = document.getElementById('btn-settings');
+      const btnHide = document.getElementById('btn-hide');
+
+      const clocks = [
+        { labelId: 'label-1', timeId: 'digital-1', dateId: 'date-1', tz: 'Europe/Budapest' },
+        { labelId: 'label-2', timeId: 'digital-2', dateId: 'date-2', tz: 'Asia/Shanghai' }
+      ];
+
+      function tickFallback() {
+        const now = new Date();
+        clocks.forEach(clock => {
+          const time = new Intl.DateTimeFormat('en-GB', {
+            timeZone: clock.tz,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).format(now);
+
+          const date = new Intl.DateTimeFormat('en-GB', {
+            timeZone: clock.tz,
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short'
+          }).format(now);
+
+          document.getElementById(clock.timeId).textContent = time;
+          document.getElementById(clock.dateId).textContent = date;
+        });
+      }
+
+      modeBtns.forEach(button => {
+        button.addEventListener('click', () => {
+          modeBtns.forEach(btn => btn.classList.toggle('active', btn === button));
+          cards.forEach(card => {
+            card.className = 'clock-card';
+            card.classList.add(`mode-${button.dataset.mode}`);
+          });
+        });
+      });
+
+      btnSettings.addEventListener('click', () => {
+        settingsPanel.classList.toggle('hidden');
+      });
+
+      document.getElementById('btn-cancel').addEventListener('click', () => {
+        settingsPanel.classList.add('hidden');
+      });
+
+      document.getElementById('btn-apply').addEventListener('click', () => {
+        document.getElementById('label-1').textContent =
+          document.getElementById('set-label-1').value.trim() || 'Budapest';
+        document.getElementById('label-2').textContent =
+          document.getElementById('set-label-2').value.trim() || 'Beijing';
+        settingsPanel.classList.add('hidden');
+      });
+
+      btnLock.addEventListener('click', () => {
+        const locked = !document.body.classList.contains('is-locked');
+        document.body.classList.toggle('is-locked', locked);
+        lockOverlay.classList.toggle('hidden', !locked);
+        btnLock.textContent = locked ? '🔒' : '🔓';
+        if (locked) dragRegion.removeAttribute('data-tauri-drag-region');
+        else dragRegion.setAttribute('data-tauri-drag-region', '');
+      });
+
+      btnHide.addEventListener('click', () => {
+        window.close();
+      });
+
+      tickFallback();
+      setInterval(tickFallback, 1000);
+    }, 300);
+  </script>
 </body>
 </html>

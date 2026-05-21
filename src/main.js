@@ -1,4 +1,6 @@
 /* ── Tauri API shim：浏览器预览时降级为 no-op ── */
+window.__worldClockMainLoaded = true;
+
 const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
 const tauriListen = tauriApi.event?.listen;
