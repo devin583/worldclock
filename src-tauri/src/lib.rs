@@ -103,6 +103,21 @@ fn save_window_state(app: &AppHandle, window: &WebviewWindow) {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn apply_premium_window_effect(window: &WebviewWindow, theme: &str) {
+    use tauri::window::{Effect, EffectsBuilder};
+
+    let effect = if theme == "light" {
+        Effect::MicaLight
+    } else {
+        Effect::MicaDark
+    };
+
+    if let Err(err) = window.set_effects(EffectsBuilder::new().effect(effect).build()) {
+        log_startup(&format!("window effects failed: {err}"));
+    }
+}
+
 /* ── Tauri 命令（前端通过 invoke 调用） ── */
 
 #[tauri::command]
@@ -132,9 +147,13 @@ fn set_locked(app: AppHandle, locked: bool) {
 
 #[tauri::command]
 fn set_theme(app: AppHandle, theme: String) {
-    // 主题切换纯前端处理，此处预留给未来系统级处理
     #[cfg(target_os = "windows")]
-    tray::set_theme_checked(&app, &theme);
+    {
+        tray::set_theme_checked(&app, &theme);
+        if let Some(window) = app.get_webview_window("main") {
+            apply_premium_window_effect(&window, &theme);
+        }
+    }
 
     #[cfg(not(target_os = "windows"))]
     let _ = (app, theme);
@@ -226,6 +245,9 @@ pub fn run() {
             }
 
             if let Some(window) = _app.get_webview_window("main") {
+                #[cfg(target_os = "windows")]
+                apply_premium_window_effect(&window, "dark");
+
                 let app_handle = _app.handle().clone();
                 let state_window = window.clone();
                 window.on_window_event(move |event| match event {

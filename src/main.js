@@ -15,6 +15,7 @@ const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
 const tauriListen = tauriApi.event?.listen;
 const isTauri = typeof tauriInvoke === 'function';
+const isWindows = /Windows/i.test(navigator.userAgent);
 
 const invoke = typeof tauriInvoke === 'function'
   ? async (cmd, args) => {
@@ -58,6 +59,7 @@ const DEFAULT_CONFIG = {
 };
 
 let config = { ...DEFAULT_CONFIG };
+let tickTimerId = null;
 
 /* ── DOM refs ── */
 const body           = document.body;
@@ -70,6 +72,8 @@ const btnHide        = document.getElementById('btn-hide');
 const settingsPanel  = document.getElementById('settings-panel');
 const modeBtns       = document.querySelectorAll('.mode-btn');
 const cards          = [document.getElementById('card-1'), document.getElementById('card-2')];
+
+body.classList.toggle('platform-windows', isWindows);
 
 /* ── 填充时区输入建议 ── */
 function populateTimezoneOptions() {
@@ -147,6 +151,8 @@ function offsetText(tz1, tz2) {
 
 /* ── 主时钟更新循环 ── */
 function tick() {
+  if (document.hidden) return;
+
   const now = new Date();
 
   config.clocks.forEach((cl, i) => {
@@ -186,6 +192,23 @@ function tick() {
     document.getElementById('offset-1').textContent = '';
   }
 }
+
+function startClock() {
+  if (tickTimerId !== null) return;
+  tick();
+  tickTimerId = window.setInterval(tick, 1000);
+}
+
+function stopClock() {
+  if (tickTimerId === null) return;
+  window.clearInterval(tickTimerId);
+  tickTimerId = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopClock();
+  else startClock();
+});
 
 /* ── 应用显示模式 ── */
 function applyMode(mode) {
@@ -351,8 +374,7 @@ async function init() {
       invoke('set_window_on_top', { enabled: config.on_top });
     }
 
-    tick();
-    setInterval(tick, 1000);
+    startClock();
     window.__worldClockMainLoaded = true;
   } catch (error) {
     console.error('init failed', error);
