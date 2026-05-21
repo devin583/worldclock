@@ -4,19 +4,21 @@ use tauri::{
     AppHandle, Emitter, Manager,
 };
 
+type TrayCheckItem = CheckMenuItem<tauri::Wry>;
+
 pub struct TrayMenuState {
-    lock: CheckMenuItem,
-    light_mode: CheckMenuItem,
-    dark_mode: CheckMenuItem,
-    ontop: CheckMenuItem,
+    lock: TrayCheckItem,
+    light_mode: TrayCheckItem,
+    dark_mode: TrayCheckItem,
+    ontop: TrayCheckItem,
 }
 
 impl TrayMenuState {
     fn new(
-        lock: CheckMenuItem,
-        light_mode: CheckMenuItem,
-        dark_mode: CheckMenuItem,
-        ontop: CheckMenuItem,
+        lock: TrayCheckItem,
+        light_mode: TrayCheckItem,
+        dark_mode: TrayCheckItem,
+        ontop: TrayCheckItem,
     ) -> Self {
         Self {
             lock,
