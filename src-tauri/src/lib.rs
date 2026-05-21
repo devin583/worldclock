@@ -53,6 +53,11 @@ fn resize_window(window: WebviewWindow, width: u32, height: u32) {
 }
 
 #[tauri::command]
+fn start_dragging(window: WebviewWindow) {
+    let _ = window.start_dragging();
+}
+
+#[tauri::command]
 async fn save_config(app: AppHandle, data: serde_json::Value) -> Result<(), String> {
     use std::fs;
     let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
@@ -115,6 +120,7 @@ pub fn run() {
             set_locked,
             set_theme,
             resize_window,
+            start_dragging,
             set_autostart,
             save_config,
             load_config,

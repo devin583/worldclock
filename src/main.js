@@ -1,5 +1,5 @@
 /* ── Tauri API shim：浏览器预览时降级为 no-op ── */
-window.__worldClockMainLoaded = true;
+window.__worldClockMainLoaded = false;
 
 const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
@@ -97,7 +97,9 @@ function drawTicks(svgGroupId, accentVar) {
 /* ── 更新指针 ── */
 function setHand(id, angleDeg) {
   const el = document.getElementById(id);
-  if (el) el.style.transform = `rotate(${angleDeg}deg)`;
+  if (!el) return;
+  el.style.transform = `rotate(${angleDeg}deg)`;
+  el.setAttribute('transform', `rotate(${angleDeg} 100 100)`);
 }
 
 /* ── 时差文字 ── */
@@ -282,6 +284,11 @@ async function applySettings() {
 }
 
 /* ── 事件绑定 ── */
+dragRegion.addEventListener('pointerdown', event => {
+  if (!isTauri || config.locked || event.button !== 0) return;
+  invoke('start_dragging');
+});
+
 btnLock.addEventListener('click', async () => {
   applyLock(!config.locked);
   await saveConfig();
@@ -346,6 +353,7 @@ async function init() {
 
     tick();
     setInterval(tick, 1000);
+    window.__worldClockMainLoaded = true;
   } catch (error) {
     console.error('init failed', error);
     appTitle.textContent = 'WorldClock Error';
