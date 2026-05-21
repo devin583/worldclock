@@ -112,11 +112,6 @@
       </label>
     </section>
 
-    <section>
-      <label>缩放 <span id="scale-val">100</span>%</label>
-      <input type="range" id="set-scale" min="60" max="200" value="100" />
-    </section>
-
     <div class="settings-actions">
       <button id="btn-apply">应用</button>
       <button id="btn-cancel">取消</button>
@@ -185,7 +180,6 @@
           { label: 'Beijing', tz: 'Asia/Shanghai' }
         ],
         mode: 'digital',
-        scale: 1,
         locked: false,
         on_top: true,
         theme: 'dark'
@@ -243,13 +237,6 @@
           card.className = 'clock-card';
           card.classList.add(`mode-${mode}`);
         });
-        const heights = { digital: 200, analog: 260, both: 270 };
-        if (isTauri) {
-          invoke('resize_window', {
-            width: Math.round(416 * config.scale),
-            height: Math.round((heights[mode] || 200) * config.scale)
-          });
-        }
       }
 
       function setLock(locked) {
@@ -299,8 +286,6 @@
           input.checked = input.value === config.theme;
         });
         document.getElementById('set-ontop').checked = config.on_top;
-        document.getElementById('set-scale').value = Math.round(config.scale * 100);
-        document.getElementById('scale-val').textContent = Math.round(config.scale * 100);
         settingsPanel.classList.remove('hidden');
       }
 
@@ -310,7 +295,6 @@
         config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Beijing';
         config.clocks[1].tz = document.getElementById('set-tz-2').value;
         config.on_top = document.getElementById('set-ontop').checked;
-        config.scale = parseInt(document.getElementById('set-scale').value, 10) / 100;
         setTheme(document.querySelector('input[name="theme"]:checked')?.value || 'dark');
         document.getElementById('label-1').textContent = config.clocks[0].label;
         document.getElementById('label-2').textContent = config.clocks[1].label;
@@ -340,10 +324,6 @@
       });
 
       document.getElementById('btn-apply').addEventListener('click', applySettings);
-
-      document.getElementById('set-scale').addEventListener('input', event => {
-        document.getElementById('scale-val').textContent = event.target.value;
-      });
 
       btnLock.addEventListener('click', () => {
         setLock(!config.locked);

@@ -51,7 +51,6 @@ const DEFAULT_CONFIG = {
     { label: 'Beijing',  tz: 'Asia/Shanghai'   },
   ],
   mode:      'digital',
-  scale:     1.0,
   locked:    false,
   on_top:    true,
   theme:     'dark',
@@ -59,9 +58,6 @@ const DEFAULT_CONFIG = {
 };
 
 let config = { ...DEFAULT_CONFIG };
-
-const BASE_WIDTH = 416;
-const MODE_HEIGHTS = { digital: 200, analog: 260, both: 270 };
 
 /* ── DOM refs ── */
 const body           = document.body;
@@ -183,21 +179,6 @@ function tick() {
   }
 }
 
-/* ── 窗口尺寸和内容缩放 ── */
-function applyWindowLayout() {
-  const baseHeight = MODE_HEIGHTS[config.mode] ?? MODE_HEIGHTS.digital;
-  const scale = Number.isFinite(config.scale) ? config.scale : DEFAULT_CONFIG.scale;
-  const width = Math.round(BASE_WIDTH * scale);
-  const height = Math.round(baseHeight * scale);
-
-  document.documentElement.style.setProperty('--app-height', `${baseHeight}px`);
-  document.documentElement.style.setProperty('--app-scale', String(scale));
-
-  if (isTauri) {
-    invoke('resize_window', { width, height });
-  }
-}
-
 /* ── 应用显示模式 ── */
 function applyMode(mode) {
   config.mode = mode;
@@ -206,7 +187,6 @@ function applyMode(mode) {
     c.classList.add(`mode-${mode}`);
   });
   modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  applyWindowLayout();
 }
 
 /* ── 应用主题 ── */
@@ -260,9 +240,6 @@ function openSettings() {
   });
   document.getElementById('set-ontop').checked    = config.on_top;
   document.getElementById('set-autostart').checked = config.autostart;
-  const scaleInput = document.getElementById('set-scale');
-  scaleInput.value = Math.round(config.scale * 100);
-  document.getElementById('scale-val').textContent = Math.round(config.scale * 100);
 }
 
 function closeSettings() {
@@ -280,7 +257,6 @@ async function applySettings() {
 
   config.on_top    = document.getElementById('set-ontop').checked;
   config.autostart = document.getElementById('set-autostart').checked;
-  config.scale     = parseInt(document.getElementById('set-scale').value) / 100;
 
   document.getElementById('label-1').textContent = config.clocks[0].label;
   document.getElementById('label-2').textContent = config.clocks[1].label;
@@ -289,7 +265,6 @@ async function applySettings() {
     invoke('set_always_on_top', { on_top: config.on_top });
     invoke('set_autostart', { enabled: config.autostart });
   }
-  applyWindowLayout();
 
   await saveConfig();
   closeSettings();
@@ -322,10 +297,6 @@ modeBtns.forEach(b => b.addEventListener('click', () => {
   applyMode(b.dataset.mode);
   saveConfig();
 }));
-
-document.getElementById('set-scale').addEventListener('input', e => {
-  document.getElementById('scale-val').textContent = e.target.value;
-});
 
 /* ── Tauri 事件监听（来自托盘） ── */
 if (isTauri) {

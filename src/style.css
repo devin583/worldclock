@@ -1,7 +1,6 @@
 /* ── CSS 变量：深色主题（默认） ── */
 :root {
   --app-height:    200px;
-  --app-scale:     1;
   --bg:            rgba(14, 14, 24, 0.96);
   --card-bg:       rgba(255, 255, 255, 0.04);
   --card-border:   rgba(255, 255, 255, 0.08);
@@ -320,11 +319,6 @@ body.is-locked #drag-region:active {
 #settings-panel input[type="text"]:focus,
 #settings-panel select:focus {
   border-color: var(--accent-1);
-}
-
-#settings-panel input[type="range"] {
-  width: 100%;
-  accent-color: var(--accent-1);
 }
 
 .radio-group {

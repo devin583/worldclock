@@ -6,7 +6,14 @@ use std::{
     io::Write,
     path::PathBuf,
 };
-use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri::{
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewWindow, WindowEvent,
+};
+
+const MIN_WINDOW_WIDTH: u32 = 360;
+const MIN_WINDOW_HEIGHT: u32 = 180;
+const MAX_WINDOW_WIDTH: u32 = 900;
+const MAX_WINDOW_HEIGHT: u32 = 560;
 
 fn startup_log_path() -> PathBuf {
     std::env::temp_dir().join("worldclock-startup.log")
@@ -21,6 +28,78 @@ fn log_startup(message: &str) {
         .open(startup_log_path())
     {
         let _ = file.write_all(line.as_bytes());
+    }
+}
+
+fn config_path(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("config.json"))
+}
+
+fn load_config_value(app: &AppHandle) -> Option<serde_json::Value> {
+    let path = config_path(app).ok()?;
+    let content = fs::read_to_string(path).ok()?;
+    serde_json::from_str(&content).ok()
+}
+
+fn write_config_value(app: &AppHandle, value: &serde_json::Value) -> Result<(), String> {
+    let path = config_path(app)?;
+    fs::write(path, value.to_string()).map_err(|e| e.to_string())
+}
+
+fn restore_window_state(app: &AppHandle, window: &WebviewWindow) {
+    let Some(config) = load_config_value(app) else {
+        return;
+    };
+    let Some(window_state) = config.get("window") else {
+        return;
+    };
+
+    let width = window_state
+        .get("width")
+        .and_then(|v| v.as_u64())
+        .map(|v| (v as u32).clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH));
+    let height = window_state
+        .get("height")
+        .and_then(|v| v.as_u64())
+        .map(|v| (v as u32).clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT));
+
+    if let (Some(width), Some(height)) = (width, height) {
+        let _ = window.set_size(Size::Physical(PhysicalSize { width, height }));
+    }
+
+    let x = window_state.get("x").and_then(|v| v.as_i64());
+    let y = window_state.get("y").and_then(|v| v.as_i64());
+    if let (Some(x), Some(y)) = (x, y) {
+        let _ = window.set_position(Position::Physical(PhysicalPosition {
+            x: x as i32,
+            y: y as i32,
+        }));
+    }
+}
+
+fn save_window_state(app: &AppHandle, window: &WebviewWindow) {
+    let Ok(size) = window.inner_size() else {
+        return;
+    };
+    let Ok(position) = window.outer_position() else {
+        return;
+    };
+
+    let mut config = load_config_value(app)
+        .filter(|value| value.is_object())
+        .unwrap_or_else(|| serde_json::json!({}));
+
+    config["window"] = serde_json::json!({
+        "width": size.width.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH),
+        "height": size.height.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT),
+        "x": position.x,
+        "y": position.y
+    });
+
+    if let Err(err) = write_config_value(app, &config) {
+        log_startup(&format!("save window state failed: {err}"));
     }
 }
 
@@ -48,29 +127,23 @@ fn set_theme(_app: AppHandle, theme: String) {
 }
 
 #[tauri::command]
-fn resize_window(window: WebviewWindow, width: u32, height: u32) {
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width, height }));
-}
-
-#[tauri::command]
 fn start_dragging(window: WebviewWindow) {
     let _ = window.start_dragging();
 }
 
 #[tauri::command]
 async fn save_config(app: AppHandle, data: serde_json::Value) -> Result<(), String> {
-    use std::fs;
-    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let path = dir.join("config.json");
-    fs::write(path, data.to_string()).map_err(|e| e.to_string())
+    let existing_window = load_config_value(&app).and_then(|value| value.get("window").cloned());
+    let mut next = data;
+    if let Some(window_state) = existing_window {
+        next["window"] = window_state;
+    }
+    write_config_value(&app, &next)
 }
 
 #[tauri::command]
 async fn load_config(app: AppHandle) -> Result<Option<serde_json::Value>, String> {
-    use std::fs;
-    let dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
-    let path = dir.join("config.json");
+    let path = config_path(&app)?;
     if !path.exists() {
         return Ok(None);
     }
@@ -105,6 +178,16 @@ pub fn run() {
             }
 
             if let Some(window) = _app.get_webview_window("main") {
+                let app_handle = _app.handle().clone();
+                let state_window = window.clone();
+                window.on_window_event(move |event| match event {
+                    WindowEvent::Focused(false)
+                    | WindowEvent::CloseRequested { .. }
+                    | WindowEvent::Destroyed => save_window_state(&app_handle, &state_window),
+                    _ => {}
+                });
+
+                restore_window_state(_app.handle(), &window);
                 let _ = window.show();
                 let _ = window.set_focus();
                 log_startup("main window show/focus requested");
@@ -119,7 +202,6 @@ pub fn run() {
             set_always_on_top,
             set_locked,
             set_theme,
-            resize_window,
             start_dragging,
             set_autostart,
             save_config,
