@@ -47,9 +47,8 @@ npm run dev
 
 - `src-tauri/target/release/bundle/nsis/*.exe`
 - `src-tauri/target/release/bundle/msi/*.msi`
-- `src-tauri/target/release/worldclock.exe`
 
-建议优先把安装包发给内网机器。`worldclock.exe` 只作为备用或诊断用途保留，不作为首选交付文件。
+建议优先把安装包发给内网机器，不要直接分发 `target/release/worldclock.exe` 这类裸可执行文件。
 
 ## 本地 Windows 打包
 
@@ -61,6 +60,12 @@ npm run build
 ```
 
 如果目标内网机没有安装 Microsoft Edge WebView2 Runtime，Tauri 应用可能无法启动。多数较新的 Windows 10/11 已内置；如果内网环境较老，交付前需要单独确认。
+
+如果 Windows 上双击安装后的程序仍然没有窗口，可以先检查启动日志：
+
+- `%TEMP%\\worldclock-startup.log`
+
+这个日志会记录主窗口创建、托盘初始化和 Rust panic，适合排查“点了运行但没有界面”的问题。
 
 ## 图标准备
 

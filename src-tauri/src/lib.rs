@@ -1,8 +1,30 @@
 #[cfg(target_os = "windows")]
 mod tray;
 
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+    path::PathBuf,
+};
 use tauri::{AppHandle, Manager, WebviewWindow};
+#[cfg(target_os = "macos")]
 use tauri_plugin_autostart::MacosLauncher;
+
+fn startup_log_path() -> PathBuf {
+    std::env::temp_dir().join("worldclock-startup.log")
+}
+
+fn log_startup(message: &str) {
+    let line = format!("{message}\n");
+    let _ = fs::create_dir_all(std::env::temp_dir());
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(startup_log_path())
+    {
+        let _ = file.write_all(line.as_bytes());
+    }
+}
 
 /* ── Tauri 命令（前端通过 invoke 调用） ── */
 
@@ -29,10 +51,7 @@ fn set_theme(_app: AppHandle, theme: String) {
 
 #[tauri::command]
 fn resize_window(window: WebviewWindow, width: u32, height: u32) {
-    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize {
-        width,
-        height,
-    }));
+    let _ = window.set_size(tauri::Size::Physical(tauri::PhysicalSize { width, height }));
 }
 
 #[tauri::command]
@@ -59,26 +78,59 @@ async fn load_config(app: AppHandle) -> Result<Option<serde_json::Value>, String
 
 #[tauri::command]
 async fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
-    use tauri_plugin_autostart::ManagerExt;
-    let mgr = app.autolaunch();
-    if enabled {
-        mgr.enable().map_err(|e| e.to_string())
-    } else {
-        mgr.disable().map_err(|e| e.to_string())
+    #[cfg(target_os = "macos")]
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let mgr = app.autolaunch();
+        if enabled {
+            mgr.enable().map_err(|e| e.to_string())
+        } else {
+            mgr.disable().map_err(|e| e.to_string())
+        }
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (app, enabled);
+        Ok(())
     }
 }
 
 /* ── 应用入口 ── */
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_autostart::init(
-            MacosLauncher::LaunchAgent,
-            Some(vec![]),
-        ))
+    std::panic::set_hook(Box::new(|panic_info| {
+        log_startup(&format!("panic: {panic_info}"));
+    }));
+
+    log_startup("run() entered");
+
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_plugin_autostart::init(
+        MacosLauncher::LaunchAgent,
+        Some(vec![]),
+    ));
+
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder;
+
+    builder
         .setup(|_app| {
+            log_startup("setup() entered");
+
             #[cfg(target_os = "windows")]
             if let Err(err) = tray::setup_tray(_app.handle()) {
-                eprintln!("tray setup failed: {err}");
+                log_startup(&format!("tray setup failed: {err}"));
+            } else {
+                log_startup("tray setup finished");
+            }
+
+            if let Some(window) = _app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+                log_startup("main window show/focus requested");
+            } else {
+                log_startup("main window not found in setup");
             }
 
             Ok(())
