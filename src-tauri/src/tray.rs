@@ -32,6 +32,8 @@ impl TrayMenuState {
 
 pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let show_hide = MenuItem::with_id(app, "show_hide", "显示 / 隐藏", true, None::<&str>)?;
+    let reset_position =
+        MenuItem::with_id(app, "reset_position", "重置窗口位置", true, None::<&str>)?;
     let lock = CheckMenuItem::with_id(app, "lock", "锁定位置", true, false, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
     let light_mode =
@@ -47,6 +49,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         app,
         &[
             &show_hide,
+            &reset_position,
             &lock,
             &sep1,
             &light_mode,
@@ -79,6 +82,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .tooltip("WorldClock")
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "show_hide" => toggle_window(app),
+            "reset_position" => crate::reset_main_window_position(app),
             "lock" => {
                 let checked = lock_item.is_checked().unwrap_or(false);
                 let _ = app.emit("tray-set-lock", checked);

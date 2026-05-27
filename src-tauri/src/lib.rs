@@ -14,6 +14,10 @@ const MIN_WINDOW_WIDTH: u32 = 360;
 const MIN_WINDOW_HEIGHT: u32 = 180;
 const MAX_WINDOW_WIDTH: u32 = 900;
 const MAX_WINDOW_HEIGHT: u32 = 560;
+const DEFAULT_WINDOW_WIDTH: u32 = 416;
+const DEFAULT_WINDOW_HEIGHT: u32 = 200;
+const MIN_VISIBLE_WIDTH: i32 = 80;
+const MIN_VISIBLE_HEIGHT: i32 = 80;
 
 fn startup_log_path() -> PathBuf {
     std::env::temp_dir().join("worldclock-startup.log")
@@ -48,6 +52,78 @@ fn write_config_value(app: &AppHandle, value: &serde_json::Value) -> Result<(), 
     fs::write(path, value.to_string()).map_err(|e| e.to_string())
 }
 
+fn centered_position(app: &AppHandle, width: u32, height: u32) -> Option<PhysicalPosition<i32>> {
+    let monitor = app.primary_monitor().ok().flatten()?;
+    let work_area = monitor.work_area();
+    let work_pos = work_area.position;
+    let work_size = work_area.size;
+    let x = work_pos.x + ((work_size.width.saturating_sub(width)) / 2) as i32;
+    let y = work_pos.y + ((work_size.height.saturating_sub(height)) / 2) as i32;
+
+    Some(PhysicalPosition { x, y })
+}
+
+fn is_position_visible(app: &AppHandle, x: i32, y: i32, width: u32, height: u32) -> bool {
+    let Ok(monitors) = app.available_monitors() else {
+        return true;
+    };
+    if monitors.is_empty() {
+        return true;
+    }
+
+    let right = x.saturating_add(width as i32);
+    let bottom = y.saturating_add(height as i32);
+
+    monitors.iter().any(|monitor| {
+        let work_area = monitor.work_area();
+        let area_x = work_area.position.x;
+        let area_y = work_area.position.y;
+        let area_right = area_x.saturating_add(work_area.size.width as i32);
+        let area_bottom = area_y.saturating_add(work_area.size.height as i32);
+
+        let visible_width = right.min(area_right) - x.max(area_x);
+        let visible_height = bottom.min(area_bottom) - y.max(area_y);
+
+        visible_width >= MIN_VISIBLE_WIDTH && visible_height >= MIN_VISIBLE_HEIGHT
+    })
+}
+
+fn safe_window_position(
+    app: &AppHandle,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+) -> PhysicalPosition<i32> {
+    if is_position_visible(app, x, y, width, height) {
+        return PhysicalPosition { x, y };
+    }
+
+    log_startup("saved window position is off-screen; resetting to primary monitor center");
+    centered_position(app, width, height).unwrap_or(PhysicalPosition { x: 80, y: 80 })
+}
+
+pub(crate) fn reset_main_window_position(app: &AppHandle) {
+    let Some(window) = app.get_webview_window("main") else {
+        return;
+    };
+
+    let size = window.inner_size().unwrap_or(PhysicalSize {
+        width: DEFAULT_WINDOW_WIDTH,
+        height: DEFAULT_WINDOW_HEIGHT,
+    });
+    let width = size.width.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+    let height = size.height.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+
+    let _ = window.set_size(Size::Physical(PhysicalSize { width, height }));
+    if let Some(position) = centered_position(app, width, height) {
+        let _ = window.set_position(Position::Physical(position));
+    }
+    let _ = window.show();
+    let _ = window.set_focus();
+    save_window_state(app, &window);
+}
+
 fn restore_window_state(app: &AppHandle, window: &WebviewWindow) {
     let Some(config) = load_config_value(app) else {
         return;
@@ -65,17 +141,20 @@ fn restore_window_state(app: &AppHandle, window: &WebviewWindow) {
         .and_then(|v| v.as_u64())
         .map(|v| (v as u32).clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT));
 
-    if let (Some(width), Some(height)) = (width, height) {
+    let width = width.unwrap_or(DEFAULT_WINDOW_WIDTH);
+    let height = height.unwrap_or(DEFAULT_WINDOW_HEIGHT);
+
+    if width >= MIN_WINDOW_WIDTH && height >= MIN_WINDOW_HEIGHT {
         let _ = window.set_size(Size::Physical(PhysicalSize { width, height }));
     }
 
     let x = window_state.get("x").and_then(|v| v.as_i64());
     let y = window_state.get("y").and_then(|v| v.as_i64());
     if let (Some(x), Some(y)) = (x, y) {
-        let _ = window.set_position(Position::Physical(PhysicalPosition {
-            x: x as i32,
-            y: y as i32,
-        }));
+        let position = safe_window_position(app, x as i32, y as i32, width, height);
+        let _ = window.set_position(Position::Physical(position));
+    } else if let Some(position) = centered_position(app, width, height) {
+        let _ = window.set_position(Position::Physical(position));
     }
 }
 
@@ -91,9 +170,13 @@ fn save_window_state(app: &AppHandle, window: &WebviewWindow) {
         .filter(|value| value.is_object())
         .unwrap_or_else(|| serde_json::json!({}));
 
+    let width = size.width.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH);
+    let height = size.height.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT);
+    let position = safe_window_position(app, position.x, position.y, width, height);
+
     config["window"] = serde_json::json!({
-        "width": size.width.clamp(MIN_WINDOW_WIDTH, MAX_WINDOW_WIDTH),
-        "height": size.height.clamp(MIN_WINDOW_HEIGHT, MAX_WINDOW_HEIGHT),
+        "width": width,
+        "height": height,
         "x": position.x,
         "y": position.y
     });
@@ -123,6 +206,11 @@ fn apply_premium_window_effect(window: &WebviewWindow, theme: &str) {
 #[tauri::command]
 fn hide_window(window: WebviewWindow) {
     let _ = window.hide();
+}
+
+#[tauri::command]
+fn reset_window_position(app: AppHandle) {
+    reset_main_window_position(&app);
 }
 
 #[tauri::command]
@@ -269,6 +357,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             hide_window,
+            reset_window_position,
             set_window_on_top,
             set_locked,
             set_theme,
