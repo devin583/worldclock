@@ -334,7 +334,7 @@ pub fn run() {
 
             if let Some(window) = _app.get_webview_window("main") {
                 #[cfg(target_os = "windows")]
-                apply_premium_window_effect(&window, "dark");
+                apply_premium_window_effect(&window, "classic");
 
                 let app_handle = _app.handle().clone();
                 let state_window = window.clone();

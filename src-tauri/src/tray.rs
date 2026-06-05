@@ -9,22 +9,31 @@ type TrayCheckItem = CheckMenuItem<tauri::Wry>;
 
 pub struct TrayMenuState {
     lock: TrayCheckItem,
-    light_mode: TrayCheckItem,
-    dark_mode: TrayCheckItem,
+    theme_classic: TrayCheckItem,
+    theme_glass_pet: TrayCheckItem,
+    theme_moon_cat: TrayCheckItem,
+    theme_pixel_buddy: TrayCheckItem,
+    theme_flip: TrayCheckItem,
     ontop: TrayCheckItem,
 }
 
 impl TrayMenuState {
     fn new(
         lock: TrayCheckItem,
-        light_mode: TrayCheckItem,
-        dark_mode: TrayCheckItem,
+        theme_classic: TrayCheckItem,
+        theme_glass_pet: TrayCheckItem,
+        theme_moon_cat: TrayCheckItem,
+        theme_pixel_buddy: TrayCheckItem,
+        theme_flip: TrayCheckItem,
         ontop: TrayCheckItem,
     ) -> Self {
         Self {
             lock,
-            light_mode,
-            dark_mode,
+            theme_classic,
+            theme_glass_pet,
+            theme_moon_cat,
+            theme_pixel_buddy,
+            theme_flip,
             ontop,
         }
     }
@@ -36,10 +45,16 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         MenuItem::with_id(app, "reset_position", "重置窗口位置", true, None::<&str>)?;
     let lock = CheckMenuItem::with_id(app, "lock", "锁定位置", true, false, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    let light_mode =
-        CheckMenuItem::with_id(app, "theme_light", "浅色模式", true, false, None::<&str>)?;
-    let dark_mode =
-        CheckMenuItem::with_id(app, "theme_dark", "深色模式", true, true, None::<&str>)?;
+    let theme_classic =
+        CheckMenuItem::with_id(app, "theme_classic", "Classic", true, true, None::<&str>)?;
+    let theme_glass_pet =
+        CheckMenuItem::with_id(app, "theme_glass_pet", "Glass Pet", true, false, None::<&str>)?;
+    let theme_moon_cat =
+        CheckMenuItem::with_id(app, "theme_moon_cat", "Moon Cat", true, false, None::<&str>)?;
+    let theme_pixel_buddy =
+        CheckMenuItem::with_id(app, "theme_pixel_buddy", "Pixel Buddy", true, false, None::<&str>)?;
+    let theme_flip =
+        CheckMenuItem::with_id(app, "theme_flip", "Flip Clock", true, false, None::<&str>)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let ontop = CheckMenuItem::with_id(app, "toggle_ontop", "始终置顶", true, true, None::<&str>)?;
     let sep3 = PredefinedMenuItem::separator(app)?;
@@ -52,8 +67,11 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             &reset_position,
             &lock,
             &sep1,
-            &light_mode,
-            &dark_mode,
+            &theme_classic,
+            &theme_glass_pet,
+            &theme_moon_cat,
+            &theme_pixel_buddy,
+            &theme_flip,
             &sep2,
             &ontop,
             &sep3,
@@ -64,14 +82,15 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let icon = Image::from_bytes(include_bytes!("../icons/tray.png"))?;
 
     let lock_item = lock.clone();
-    let light_item = light_mode.clone();
-    let dark_item = dark_mode.clone();
     let ontop_item = ontop.clone();
 
     app.manage(TrayMenuState::new(
         lock.clone(),
-        light_mode.clone(),
-        dark_mode.clone(),
+        theme_classic.clone(),
+        theme_glass_pet.clone(),
+        theme_moon_cat.clone(),
+        theme_pixel_buddy.clone(),
+        theme_flip.clone(),
         ontop.clone(),
     ));
 
@@ -87,16 +106,11 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                 let checked = lock_item.is_checked().unwrap_or(false);
                 let _ = app.emit("tray-set-lock", checked);
             }
-            "theme_light" => {
-                let _ = light_item.set_checked(true);
-                let _ = dark_item.set_checked(false);
-                let _ = app.emit("tray-set-theme", "light");
-            }
-            "theme_dark" => {
-                let _ = light_item.set_checked(false);
-                let _ = dark_item.set_checked(true);
-                let _ = app.emit("tray-set-theme", "dark");
-            }
+            "theme_classic" => set_theme_from_tray(app, "classic"),
+            "theme_glass_pet" => set_theme_from_tray(app, "glass-pet"),
+            "theme_moon_cat" => set_theme_from_tray(app, "moon-cat"),
+            "theme_pixel_buddy" => set_theme_from_tray(app, "pixel-buddy"),
+            "theme_flip" => set_theme_from_tray(app, "flip"),
             "toggle_ontop" => {
                 let checked = ontop_item.is_checked().unwrap_or(true);
                 if let Some(win) = app.get_webview_window("main") {
@@ -130,9 +144,11 @@ pub fn set_lock_checked(app: &AppHandle, checked: bool) {
 
 pub fn set_theme_checked(app: &AppHandle, theme: &str) {
     if let Some(state) = app.try_state::<TrayMenuState>() {
-        let is_light = theme == "light";
-        let _ = state.light_mode.set_checked(is_light);
-        let _ = state.dark_mode.set_checked(!is_light);
+        let _ = state.theme_classic.set_checked(theme == "classic");
+        let _ = state.theme_glass_pet.set_checked(theme == "glass-pet");
+        let _ = state.theme_moon_cat.set_checked(theme == "moon-cat");
+        let _ = state.theme_pixel_buddy.set_checked(theme == "pixel-buddy");
+        let _ = state.theme_flip.set_checked(theme == "flip");
     }
 }
 
@@ -151,4 +167,9 @@ fn toggle_window(app: &AppHandle) {
             let _ = win.set_focus();
         }
     }
+}
+
+fn set_theme_from_tray(app: &AppHandle, theme: &str) {
+    set_theme_checked(app, theme);
+    let _ = app.emit("tray-set-theme", theme);
 }

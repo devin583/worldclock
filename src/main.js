@@ -9,8 +9,6 @@ window.__worldClockMainBootstrapped = true;
 window.__worldClockMainStarted = true;
 window.__worldClockMainLoaded = false;
 
-/* ── Tauri API shim：浏览器预览时降级为 no-op ── */
-
 const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
 const tauriListen = tauriApi.event?.listen;
@@ -32,7 +30,6 @@ const listen = typeof tauriListen === 'function'
   ? tauriListen
   : async () => () => {};
 
-/* ── 时区列表 ── */
 const TIMEZONES = [
   'Europe/Budapest','Europe/London','Europe/Paris','Europe/Berlin','Europe/Rome',
   'Europe/Madrid','Europe/Warsaw','Europe/Kiev','Europe/Moscow','Europe/Istanbul',
@@ -45,23 +42,30 @@ const TIMEZONES = [
   'Atlantic/Reykjavik','UTC',
 ];
 
-/* ── 默认配置 ── */
+const THEME_VALUES = ['classic', 'glass-pet', 'moon-cat', 'pixel-buddy', 'flip'];
+const THEME_CLASSES = THEME_VALUES.map(theme => `theme-${theme}`);
+const LEGACY_THEME_MAP = {
+  dark: 'classic',
+  light: 'glass-pet',
+};
+const MODE_VALUES = ['digital', 'analog', 'both'];
+
 const DEFAULT_CONFIG = {
   clocks: [
     { label: 'Budapest', tz: 'Europe/Budapest' },
-    { label: 'Beijing',  tz: 'Asia/Shanghai'   },
+    { label: 'Beijing',  tz: 'Asia/Shanghai' },
   ],
-  mode:      'digital',
-  locked:    false,
-  on_top:    true,
-  theme:     'dark',
+  clockCount: 2,
+  mode: 'digital',
+  locked: false,
+  on_top: true,
+  theme: 'classic',
   autostart: false,
 };
 
-let config = { ...DEFAULT_CONFIG };
+let config = normalizeConfig();
 let tickTimerId = null;
 
-/* ── DOM refs ── */
 const body           = document.body;
 const dragRegion     = document.getElementById('drag-region');
 const appTitle       = document.getElementById('app-title');
@@ -75,7 +79,53 @@ const cards          = [document.getElementById('card-1'), document.getElementBy
 
 body.classList.toggle('platform-windows', isWindows);
 
-/* ── 填充时区输入建议 ── */
+function normalizeTheme(theme) {
+  const next = LEGACY_THEME_MAP[theme] || theme;
+  return THEME_VALUES.includes(next) ? next : DEFAULT_CONFIG.theme;
+}
+
+function normalizeMode(mode) {
+  return MODE_VALUES.includes(mode) ? mode : DEFAULT_CONFIG.mode;
+}
+
+function normalizeClock(clock, fallback) {
+  return {
+    label: typeof clock?.label === 'string' && clock.label.trim()
+      ? clock.label.trim()
+      : fallback.label,
+    tz: TIMEZONES.includes(clock?.tz) ? clock.tz : fallback.tz,
+  };
+}
+
+function normalizeClockCount(value) {
+  return Number(value) === 1 ? 1 : 2;
+}
+
+function normalizeConfig(saved = {}) {
+  const source = saved && typeof saved === 'object' ? saved : {};
+  const savedClocks = Array.isArray(source.clocks) ? source.clocks : [];
+  const clocks = [
+    normalizeClock(savedClocks[0], DEFAULT_CONFIG.clocks[0]),
+    normalizeClock(savedClocks[1], DEFAULT_CONFIG.clocks[1]),
+  ];
+
+  return {
+    ...DEFAULT_CONFIG,
+    ...source,
+    clocks,
+    clockCount: normalizeClockCount(source.clockCount ?? DEFAULT_CONFIG.clockCount),
+    mode: normalizeMode(source.mode),
+    theme: normalizeTheme(source.theme),
+    locked: Boolean(source.locked),
+    on_top: source.on_top !== false,
+    autostart: Boolean(source.autostart),
+  };
+}
+
+function activeClockCount() {
+  return normalizeClockCount(config.clockCount);
+}
+
 function populateTimezoneOptions() {
   const datalist = document.getElementById('timezone-options');
   if (!datalist) return;
@@ -95,8 +145,7 @@ function resolveTimezone(value, fallback) {
     || fallback;
 }
 
-/* ── 绘制刻度 ── */
-function drawTicks(svgGroupId, accentVar) {
+function drawTicks(svgGroupId) {
   const g = document.getElementById(svgGroupId);
   if (!g) return;
   g.innerHTML = '';
@@ -111,15 +160,16 @@ function drawTicks(svgGroupId, accentVar) {
     const x2 = 100 + r2 * Math.cos(rad);
     const y2 = 100 + r2 * Math.sin(rad);
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
     line.setAttribute('stroke', 'var(--tick-color)');
     line.setAttribute('stroke-width', isHour ? 2 : 1);
     g.appendChild(line);
   }
 }
 
-/* ── 更新指针 ── */
 function setHand(id, angleDeg) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -127,7 +177,20 @@ function setHand(id, angleDeg) {
   el.setAttribute('transform', `rotate(${angleDeg} 100 100)`);
 }
 
-/* ── 时差文字 ── */
+function renderDigitalTime(index, value) {
+  const el = document.getElementById(`digital-${index}`);
+  if (!el) return;
+  if (config.theme !== 'flip') {
+    el.textContent = value;
+    return;
+  }
+
+  el.innerHTML = [...value].map(char => {
+    if (char === ':') return '<span class="flip-sep">:</span>';
+    return `<span class="flip-char">${char}</span>`;
+  }).join('');
+}
+
 function offsetText(tz1, tz2) {
   const now = new Date();
   const offset = (d, tz) => {
@@ -138,7 +201,7 @@ function offsetText(tz1, tz2) {
       const tzPart = s.find(p => p.type === 'timeZoneName')?.value ?? 'UTC+0';
       const m = tzPart.match(/([+-])(\d+)(?::(\d+))?/);
       if (!m) return 0;
-      return (parseInt(m[2]) + (parseInt(m[3] ?? 0) / 60)) * (m[1] === '+' ? 1 : -1);
+      return (parseInt(m[2], 10) + (parseInt(m[3] ?? 0, 10) / 60)) * (m[1] === '+' ? 1 : -1);
     } catch (error) {
       console.warn('offset fallback', tz, error);
       return 0;
@@ -149,48 +212,63 @@ function offsetText(tz1, tz2) {
   return `${sign}${diff}h · 对比 ${config.clocks[0].label}`;
 }
 
-/* ── 主时钟更新循环 ── */
+function clearClock(index) {
+  const digital = document.getElementById(`digital-${index}`);
+  const date = document.getElementById(`date-${index}`);
+  const offset = document.getElementById(`offset-${index}`);
+  if (digital) digital.textContent = '';
+  if (date) date.textContent = '';
+  if (offset) offset.textContent = '';
+}
+
 function tick() {
   if (document.hidden) return;
 
   const now = new Date();
+  const count = activeClockCount();
 
-  config.clocks.forEach((cl, i) => {
+  for (let i = 0; i < 2; i++) {
     const idx = i + 1;
+    if (i >= count) {
+      clearClock(idx);
+      continue;
+    }
 
-    /* 格式化时间 */
+    const cl = config.clocks[i];
     const timeParts = new Intl.DateTimeFormat('en-GB', {
       timeZone: cl.tz,
-      hour:   '2-digit', minute: '2-digit', second: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
       hour12: false,
     }).formatToParts(now);
 
     const get = type => timeParts.find(p => p.type === type)?.value ?? '00';
-    const hh = get('hour'), mm = get('minute'), ss = get('second');
+    const hh = get('hour');
+    const mm = get('minute');
+    const ss = get('second');
 
-    document.getElementById(`digital-${idx}`).textContent = `${hh}:${mm}:${ss}`;
+    renderDigitalTime(idx, `${hh}:${mm}:${ss}`);
 
-    /* 日期 */
     const dateStr = new Intl.DateTimeFormat('en-GB', {
-      timeZone: cl.tz, weekday: 'short', day: 'numeric', month: 'short',
+      timeZone: cl.tz,
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
     }).format(now);
     document.getElementById(`date-${idx}`).textContent = dateStr;
 
-    /* 指针角度 */
-    const h = parseInt(hh) % 12;
-    const m = parseInt(mm);
-    const s = parseInt(ss);
-    setHand(`hour-${idx}`,   (h + m / 60) * 30);
+    const h = parseInt(hh, 10) % 12;
+    const m = parseInt(mm, 10);
+    const s = parseInt(ss, 10);
+    setHand(`hour-${idx}`, (h + m / 60) * 30);
     setHand(`minute-${idx}`, (m + s / 60) * 6);
     setHand(`second-${idx}`, s * 6);
-  });
-
-  /* 时差（clock 2 相对 clock 1） */
-  if (config.clocks.length >= 2) {
-    document.getElementById('offset-2').textContent =
-      offsetText(config.clocks[0].tz, config.clocks[1].tz);
-    document.getElementById('offset-1').textContent = '';
   }
+
+  document.getElementById('offset-1').textContent = '';
+  document.getElementById('offset-2').textContent =
+    count >= 2 ? offsetText(config.clocks[0].tz, config.clocks[1].tz) : '';
 }
 
 function startClock() {
@@ -210,22 +288,38 @@ document.addEventListener('visibilitychange', () => {
   else startClock();
 });
 
-/* ── 应用显示模式 ── */
 function applyMode(mode) {
-  config.mode = mode;
-  cards.forEach(c => {
-    c.className = 'clock-card';
-    c.classList.add(`mode-${mode}`);
+  config.mode = normalizeMode(mode);
+  cards.forEach(card => {
+    card.className = 'clock-card';
+    card.classList.add(`mode-${config.mode}`);
   });
-  modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  modeBtns.forEach(button => {
+    button.classList.toggle('active', button.dataset.mode === config.mode);
+  });
 }
 
-/* ── 应用主题 ── */
 function applyTheme(theme) {
-  config.theme = theme;
-  body.classList.remove('theme-dark', 'theme-light');
-  body.classList.add(`theme-${theme}`);
-  if (isTauri) invoke('set_theme', { theme });
+  config.theme = normalizeTheme(theme);
+  body.classList.remove(...THEME_CLASSES, 'theme-dark', 'theme-light');
+  body.classList.add(`theme-${config.theme}`);
+  document.querySelectorAll('input[name="theme"]').forEach(input => {
+    input.checked = input.value === config.theme;
+  });
+  if (isTauri) invoke('set_theme', { theme: config.theme });
+  tick();
+}
+
+function applyClockCount(count) {
+  config.clockCount = normalizeClockCount(count);
+  body.classList.toggle('clock-count-1', config.clockCount === 1);
+  body.classList.toggle('clock-count-2', config.clockCount === 2);
+  cards[1]?.setAttribute('aria-hidden', config.clockCount === 1 ? 'true' : 'false');
+  document.querySelectorAll('input[name="clock-count"]').forEach(input => {
+    input.checked = Number(input.value) === config.clockCount;
+  });
+  syncSettingsClockCountVisibility();
+  tick();
 }
 
 function applyOnTop(enabled) {
@@ -233,7 +327,6 @@ function applyOnTop(enabled) {
   if (isTauri) invoke('set_window_on_top', { enabled });
 }
 
-/* ── 锁定 ── */
 function applyLock(locked) {
   config.locked = locked;
   lockOverlay.classList.add('hidden');
@@ -244,26 +337,32 @@ function applyLock(locked) {
   if (isTauri) invoke('set_locked', { locked });
 }
 
-/* ── 持久化存储（Rust ファイル I/O） ── */
 async function saveConfig() {
   if (!isTauri) return;
   try {
     await invoke('save_config', { data: config });
-  } catch (e) { console.error('saveConfig', e); }
+  } catch (e) {
+    console.error('saveConfig', e);
+  }
 }
 
 async function loadConfig() {
   if (!isTauri) return;
   try {
     const saved = await invoke('load_config');
-    if (saved) config = { ...DEFAULT_CONFIG, ...saved };
-  } catch (e) { console.error('loadConfig', e); }
+    config = normalizeConfig(saved);
+  } catch (e) {
+    console.error('loadConfig', e);
+  }
 }
 
-/* ── 设置面板 ── */
+function syncSettingsClockCountVisibility() {
+  const selected = document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount;
+  settingsPanel.classList.toggle('clock-count-1', Number(selected) === 1);
+}
+
 function openSettings() {
   settingsPanel.classList.remove('hidden');
-
   populateTimezoneOptions();
 
   document.getElementById('set-label-1').value = config.clocks[0].label;
@@ -271,11 +370,16 @@ function openSettings() {
   document.getElementById('set-tz-1').value = config.clocks[0].tz;
   document.getElementById('set-tz-2').value = config.clocks[1].tz;
 
-  document.querySelectorAll('input[name="theme"]').forEach(r => {
-    r.checked = r.value === config.theme;
+  document.querySelectorAll('input[name="clock-count"]').forEach(input => {
+    input.checked = Number(input.value) === config.clockCount;
   });
-  document.getElementById('set-ontop').checked    = config.on_top;
+  document.querySelectorAll('input[name="theme"]').forEach(input => {
+    input.checked = input.value === config.theme;
+  });
+
+  document.getElementById('set-ontop').checked = config.on_top;
   document.getElementById('set-autostart').checked = config.autostart;
+  syncSettingsClockCountVisibility();
 }
 
 function closeSettings() {
@@ -283,6 +387,8 @@ function closeSettings() {
 }
 
 async function applySettings() {
+  applyClockCount(document.querySelector('input[name="clock-count"]:checked')?.value ?? 2);
+
   config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Clock 1';
   config.clocks[0].tz = resolveTimezone(
     document.getElementById('set-tz-1').value,
@@ -294,9 +400,7 @@ async function applySettings() {
     config.clocks[1].tz
   );
 
-  const themeVal = document.querySelector('input[name="theme"]:checked')?.value ?? 'dark';
-  applyTheme(themeVal);
-
+  applyTheme(document.querySelector('input[name="theme"]:checked')?.value ?? DEFAULT_CONFIG.theme);
   applyOnTop(document.getElementById('set-ontop').checked);
   config.autostart = document.getElementById('set-autostart').checked;
 
@@ -307,11 +411,11 @@ async function applySettings() {
     invoke('set_autostart', { enabled: config.autostart });
   }
 
+  tick();
   await saveConfig();
   closeSettings();
 }
 
-/* ── 事件绑定 ── */
 dragRegion.addEventListener('pointerdown', event => {
   if (!isTauri || config.locked || event.button !== 0) return;
   invoke('start_dragging');
@@ -334,12 +438,16 @@ btnHide.addEventListener('click', () => {
 document.getElementById('btn-apply').addEventListener('click', applySettings);
 document.getElementById('btn-cancel').addEventListener('click', closeSettings);
 
-modeBtns.forEach(b => b.addEventListener('click', () => {
-  applyMode(b.dataset.mode);
+document.querySelectorAll('input[name="clock-count"]').forEach(input => {
+  input.addEventListener('change', syncSettingsClockCountVisibility);
+});
+
+modeBtns.forEach(button => button.addEventListener('click', () => {
+  applyMode(button.dataset.mode);
+  tick();
   saveConfig();
 }));
 
-/* ── Tauri 事件监听（来自托盘） ── */
 if (isTauri) {
   listen('tray-set-lock', async e => {
     applyLock(Boolean(e.payload));
@@ -355,7 +463,6 @@ if (isTauri) {
   });
 }
 
-/* ── 初始化 ── */
 async function init() {
   try {
     await loadConfig();
@@ -367,6 +474,7 @@ async function init() {
     document.getElementById('label-2').textContent = config.clocks[1].label;
 
     applyTheme(config.theme);
+    applyClockCount(config.clockCount);
     applyMode(config.mode);
     applyLock(config.locked);
 

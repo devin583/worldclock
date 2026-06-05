@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link rel="stylesheet" href="style.css?v=win11p1" />
+  <link rel="stylesheet" href="style.css?v=pet1" />
 </head>
-<body class="theme-dark">
+<body class="theme-classic clock-count-2">
 
   <!-- 顶栏：拖动区 + 控制按钮 -->
   <div id="bar">
@@ -98,13 +98,21 @@
     <h3>设置</h3>
 
     <section>
+      <label>时钟数量</label>
+      <div class="radio-group">
+        <label><input type="radio" name="clock-count" value="1" /> 单时钟</label>
+        <label><input type="radio" name="clock-count" value="2" checked /> 双时钟</label>
+      </div>
+    </section>
+
+    <section>
       <label>时钟 1 城市名</label>
       <input type="text" id="set-label-1" value="Budapest" />
       <label>时区</label>
       <input type="text" id="set-tz-1" list="timezone-options" value="Europe/Budapest" />
     </section>
 
-    <section>
+    <section id="clock-2-settings">
       <label>时钟 2 城市名</label>
       <input type="text" id="set-label-2" value="Beijing" />
       <label>时区</label>
@@ -114,10 +122,13 @@
     <datalist id="timezone-options"></datalist>
 
     <section>
-      <label>主题</label>
+      <label>外观主题</label>
       <div class="radio-group">
-        <label><input type="radio" name="theme" value="dark" checked /> 深色</label>
-        <label><input type="radio" name="theme" value="light" /> 浅色</label>
+        <label><input type="radio" name="theme" value="classic" checked /> Classic</label>
+        <label><input type="radio" name="theme" value="glass-pet" /> Glass Pet</label>
+        <label><input type="radio" name="theme" value="moon-cat" /> Moon Cat</label>
+        <label><input type="radio" name="theme" value="pixel-buddy" /> Pixel Buddy</label>
+        <label><input type="radio" name="theme" value="flip" /> Flip Clock</label>
       </div>
     </section>
 
@@ -153,7 +164,7 @@
       if (offset && event?.reason) offset.textContent = String(event.reason).slice(0, 80);
     });
   </script>
-  <script src="main.js?v=win11p1"></script>
+  <script src="main.js?v=pet1"></script>
   <script>
     setTimeout(() => {
       if (window.__worldClockMainStarted) return;
@@ -184,6 +195,8 @@
         'Pacific/Auckland','Pacific/Sydney','Pacific/Honolulu',
         'Africa/Cairo','Africa/Lagos','Africa/Nairobi','Atlantic/Reykjavik','UTC'
       ];
+      const THEME_VALUES = ['classic', 'glass-pet', 'moon-cat', 'pixel-buddy', 'flip'];
+      const THEME_CLASSES = THEME_VALUES.map(theme => `theme-${theme}`);
 
       const modeBtns = document.querySelectorAll('.mode-btn');
       const cards = [document.getElementById('card-1'), document.getElementById('card-2')];
@@ -199,10 +212,11 @@
           { label: 'Budapest', tz: 'Europe/Budapest' },
           { label: 'Beijing', tz: 'Asia/Shanghai' }
         ],
+        clockCount: 2,
         mode: 'digital',
         locked: false,
         on_top: true,
-        theme: 'dark'
+        theme: 'classic'
       };
 
       function populateTimezoneOptions() {
@@ -252,9 +266,18 @@
       }
 
       function setTheme(theme) {
+        if (!THEME_VALUES.includes(theme)) theme = 'classic';
         config.theme = theme;
-        document.body.classList.remove('theme-dark', 'theme-light');
+        document.body.classList.remove(...THEME_CLASSES, 'theme-dark', 'theme-light');
         document.body.classList.add(`theme-${theme}`);
+      }
+
+      function applyClockCount(count) {
+        config.clockCount = Number(count) === 1 ? 1 : 2;
+        document.body.classList.toggle('clock-count-1', config.clockCount === 1);
+        document.body.classList.toggle('clock-count-2', config.clockCount === 2);
+        settingsPanel.classList.toggle('clock-count-1', config.clockCount === 1);
+        cards[1]?.setAttribute('aria-hidden', config.clockCount === 1 ? 'true' : 'false');
       }
 
       function applyOnTop(enabled) {
@@ -283,6 +306,7 @@
       function tickFallback() {
         const now = new Date();
         config.clocks.forEach((clock, index) => {
+          if (index >= config.clockCount) return;
           const idx = index + 1;
           const parts = new Intl.DateTimeFormat('en-GB', {
             timeZone: clock.tz,
@@ -309,6 +333,9 @@
           setHand(`minute-${idx}`, (parseInt(mm, 10) + parseInt(ss, 10) / 60) * 6);
           setHand(`second-${idx}`, parseInt(ss, 10) * 6);
         });
+        if (config.clockCount === 1) {
+          document.getElementById('offset-2').textContent = '';
+        }
       }
 
       function openSettings() {
@@ -317,6 +344,9 @@
         document.getElementById('set-label-2').value = config.clocks[1].label;
         document.getElementById('set-tz-1').value = config.clocks[0].tz;
         document.getElementById('set-tz-2').value = config.clocks[1].tz;
+        document.querySelectorAll('input[name="clock-count"]').forEach(input => {
+          input.checked = Number(input.value) === config.clockCount;
+        });
         document.querySelectorAll('input[name="theme"]').forEach(input => {
           input.checked = input.value === config.theme;
         });
@@ -325,6 +355,7 @@
       }
 
       function applySettings() {
+        applyClockCount(document.querySelector('input[name="clock-count"]:checked')?.value || 2);
         config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Budapest';
         config.clocks[0].tz = resolveTimezone(
           document.getElementById('set-tz-1').value,
@@ -336,7 +367,7 @@
           config.clocks[1].tz
         );
         applyOnTop(document.getElementById('set-ontop').checked);
-        setTheme(document.querySelector('input[name="theme"]:checked')?.value || 'dark');
+        setTheme(document.querySelector('input[name="theme"]:checked')?.value || 'classic');
         document.getElementById('label-1').textContent = config.clocks[0].label;
         document.getElementById('label-2').textContent = config.clocks[1].label;
         setMode(config.mode);
@@ -347,6 +378,7 @@
       drawTicks('ticks-1');
       drawTicks('ticks-2');
       setTheme(config.theme);
+      applyClockCount(config.clockCount);
       setMode(config.mode);
 
       dragRegion.addEventListener('pointerdown', event => {
