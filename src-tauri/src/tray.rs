@@ -9,10 +9,9 @@ type TrayCheckItem = CheckMenuItem<tauri::Wry>;
 
 pub struct TrayMenuState {
     lock: TrayCheckItem,
-    theme_classic: TrayCheckItem,
-    theme_glass_pet: TrayCheckItem,
-    theme_moon_cat: TrayCheckItem,
-    theme_pixel_buddy: TrayCheckItem,
+    theme_minimal_glass: TrayCheckItem,
+    theme_mechanical: TrayCheckItem,
+    theme_soft_companion: TrayCheckItem,
     theme_flip: TrayCheckItem,
     ontop: TrayCheckItem,
 }
@@ -20,19 +19,17 @@ pub struct TrayMenuState {
 impl TrayMenuState {
     fn new(
         lock: TrayCheckItem,
-        theme_classic: TrayCheckItem,
-        theme_glass_pet: TrayCheckItem,
-        theme_moon_cat: TrayCheckItem,
-        theme_pixel_buddy: TrayCheckItem,
+        theme_minimal_glass: TrayCheckItem,
+        theme_mechanical: TrayCheckItem,
+        theme_soft_companion: TrayCheckItem,
         theme_flip: TrayCheckItem,
         ontop: TrayCheckItem,
     ) -> Self {
         Self {
             lock,
-            theme_classic,
-            theme_glass_pet,
-            theme_moon_cat,
-            theme_pixel_buddy,
+            theme_minimal_glass,
+            theme_mechanical,
+            theme_soft_companion,
             theme_flip,
             ontop,
         }
@@ -45,14 +42,30 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         MenuItem::with_id(app, "reset_position", "重置窗口位置", true, None::<&str>)?;
     let lock = CheckMenuItem::with_id(app, "lock", "锁定位置", true, false, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    let theme_classic =
-        CheckMenuItem::with_id(app, "theme_classic", "Classic", true, true, None::<&str>)?;
-    let theme_glass_pet =
-        CheckMenuItem::with_id(app, "theme_glass_pet", "Glass Pet", true, false, None::<&str>)?;
-    let theme_moon_cat =
-        CheckMenuItem::with_id(app, "theme_moon_cat", "Moon Cat", true, false, None::<&str>)?;
-    let theme_pixel_buddy =
-        CheckMenuItem::with_id(app, "theme_pixel_buddy", "Pixel Buddy", true, false, None::<&str>)?;
+    let theme_minimal_glass = CheckMenuItem::with_id(
+        app,
+        "theme_minimal_glass",
+        "Minimal Glass",
+        true,
+        true,
+        None::<&str>,
+    )?;
+    let theme_mechanical = CheckMenuItem::with_id(
+        app,
+        "theme_mechanical",
+        "Mechanical",
+        true,
+        false,
+        None::<&str>,
+    )?;
+    let theme_soft_companion = CheckMenuItem::with_id(
+        app,
+        "theme_soft_companion",
+        "Soft Companion",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let theme_flip =
         CheckMenuItem::with_id(app, "theme_flip", "Flip Clock", true, false, None::<&str>)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
@@ -67,10 +80,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             &reset_position,
             &lock,
             &sep1,
-            &theme_classic,
-            &theme_glass_pet,
-            &theme_moon_cat,
-            &theme_pixel_buddy,
+            &theme_minimal_glass,
+            &theme_mechanical,
+            &theme_soft_companion,
             &theme_flip,
             &sep2,
             &ontop,
@@ -86,10 +98,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 
     app.manage(TrayMenuState::new(
         lock.clone(),
-        theme_classic.clone(),
-        theme_glass_pet.clone(),
-        theme_moon_cat.clone(),
-        theme_pixel_buddy.clone(),
+        theme_minimal_glass.clone(),
+        theme_mechanical.clone(),
+        theme_soft_companion.clone(),
         theme_flip.clone(),
         ontop.clone(),
     ));
@@ -106,10 +117,9 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
                 let checked = lock_item.is_checked().unwrap_or(false);
                 let _ = app.emit("tray-set-lock", checked);
             }
-            "theme_classic" => set_theme_from_tray(app, "classic"),
-            "theme_glass_pet" => set_theme_from_tray(app, "glass-pet"),
-            "theme_moon_cat" => set_theme_from_tray(app, "moon-cat"),
-            "theme_pixel_buddy" => set_theme_from_tray(app, "pixel-buddy"),
+            "theme_minimal_glass" => set_theme_from_tray(app, "minimal-glass"),
+            "theme_mechanical" => set_theme_from_tray(app, "mechanical"),
+            "theme_soft_companion" => set_theme_from_tray(app, "soft-companion"),
             "theme_flip" => set_theme_from_tray(app, "flip"),
             "toggle_ontop" => {
                 let checked = ontop_item.is_checked().unwrap_or(true);
@@ -144,10 +154,13 @@ pub fn set_lock_checked(app: &AppHandle, checked: bool) {
 
 pub fn set_theme_checked(app: &AppHandle, theme: &str) {
     if let Some(state) = app.try_state::<TrayMenuState>() {
-        let _ = state.theme_classic.set_checked(theme == "classic");
-        let _ = state.theme_glass_pet.set_checked(theme == "glass-pet");
-        let _ = state.theme_moon_cat.set_checked(theme == "moon-cat");
-        let _ = state.theme_pixel_buddy.set_checked(theme == "pixel-buddy");
+        let _ = state
+            .theme_minimal_glass
+            .set_checked(theme == "minimal-glass");
+        let _ = state.theme_mechanical.set_checked(theme == "mechanical");
+        let _ = state
+            .theme_soft_companion
+            .set_checked(theme == "soft-companion");
         let _ = state.theme_flip.set_checked(theme == "flip");
     }
 }

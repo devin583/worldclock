@@ -1,6 +1,7 @@
 #[cfg(target_os = "windows")]
 mod tray;
 
+use serde::Deserialize;
 use std::{
     fs::{self, OpenOptions},
     io::Write,
@@ -11,13 +12,23 @@ use tauri::{
 };
 
 const MIN_WINDOW_WIDTH: u32 = 360;
-const MIN_WINDOW_HEIGHT: u32 = 180;
+const MIN_WINDOW_HEIGHT: u32 = 220;
 const MAX_WINDOW_WIDTH: u32 = 900;
-const MAX_WINDOW_HEIGHT: u32 = 560;
-const DEFAULT_WINDOW_WIDTH: u32 = 416;
-const DEFAULT_WINDOW_HEIGHT: u32 = 200;
+const MAX_WINDOW_HEIGHT: u32 = 620;
+const DEFAULT_WINDOW_WIDTH: u32 = 560;
+const DEFAULT_WINDOW_HEIGHT: u32 = 320;
 const MIN_VISIBLE_WIDTH: i32 = 80;
 const MIN_VISIBLE_HEIGHT: i32 = 80;
+
+#[derive(Debug, Deserialize)]
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+struct HitTestRegion {
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    radius: i32,
+}
 
 fn startup_log_path() -> PathBuf {
     std::env::temp_dir().join("worldclock-startup.log")
@@ -188,17 +199,7 @@ fn save_window_state(app: &AppHandle, window: &WebviewWindow) {
 
 #[cfg(target_os = "windows")]
 fn apply_premium_window_effect(window: &WebviewWindow, theme: &str) {
-    use tauri::window::{Effect, EffectsBuilder};
-
-    let effect = if theme == "light" {
-        Effect::MicaLight
-    } else {
-        Effect::MicaDark
-    };
-
-    if let Err(err) = window.set_effects(EffectsBuilder::new().effect(effect).build()) {
-        log_startup(&format!("window effects failed: {err}"));
-    }
+    let _ = (window, theme);
 }
 
 /* ── Tauri 命令（前端通过 invoke 调用） ── */
@@ -250,6 +251,81 @@ fn set_theme(app: AppHandle, theme: String) {
 #[tauri::command]
 fn start_dragging(window: WebviewWindow) {
     let _ = window.start_dragging();
+}
+
+#[tauri::command]
+fn set_hit_test_regions(window: WebviewWindow, regions: Vec<HitTestRegion>) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        apply_hit_test_regions(&window, &regions)?;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (window, regions);
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn apply_hit_test_regions(window: &WebviewWindow, regions: &[HitTestRegion]) -> Result<(), String> {
+    use std::ptr::null_mut;
+    use windows_sys::Win32::Graphics::Gdi::{
+        CombineRgn, CreateRectRgn, CreateRoundRectRgn, DeleteObject, SetWindowRgn, RGN_OR,
+    };
+
+    let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+    let hwnd = hwnd.0 as windows_sys::Win32::Foundation::HWND;
+
+    if regions.is_empty() {
+        let result = unsafe { SetWindowRgn(hwnd, null_mut(), 1) };
+        if result == 0 {
+            return Err("SetWindowRgn failed while clearing region".to_string());
+        }
+        return Ok(());
+    }
+
+    let combined = unsafe { CreateRectRgn(0, 0, 0, 0) };
+    if combined.is_null() {
+        return Err("CreateRectRgn failed".to_string());
+    }
+
+    for region in regions {
+        if region.width <= 0 || region.height <= 0 {
+            continue;
+        }
+
+        let left = region.x;
+        let top = region.y;
+        let right = region.x.saturating_add(region.width);
+        let bottom = region.y.saturating_add(region.height);
+        let radius = region.radius.max(0);
+        let next = if radius > 0 {
+            unsafe { CreateRoundRectRgn(left, top, right, bottom, radius, radius) }
+        } else {
+            unsafe { CreateRectRgn(left, top, right, bottom) }
+        };
+
+        if next.is_null() {
+            continue;
+        }
+
+        unsafe {
+            CombineRgn(combined, combined, next, RGN_OR);
+            DeleteObject(next);
+        }
+    }
+
+    let result = unsafe { SetWindowRgn(hwnd, combined, 1) };
+    if result == 0 {
+        unsafe {
+            DeleteObject(combined);
+        }
+        return Err("SetWindowRgn failed".to_string());
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -362,6 +438,7 @@ pub fn run() {
             set_locked,
             set_theme,
             start_dragging,
+            set_hit_test_regions,
             set_autostart,
             save_config,
             load_config,
