@@ -13,6 +13,7 @@ pub struct TrayMenuState {
     theme_mechanical: TrayCheckItem,
     theme_soft_companion: TrayCheckItem,
     theme_flip: TrayCheckItem,
+    theme_boundless: TrayCheckItem,
     ontop: TrayCheckItem,
 }
 
@@ -23,6 +24,7 @@ impl TrayMenuState {
         theme_mechanical: TrayCheckItem,
         theme_soft_companion: TrayCheckItem,
         theme_flip: TrayCheckItem,
+        theme_boundless: TrayCheckItem,
         ontop: TrayCheckItem,
     ) -> Self {
         Self {
@@ -31,6 +33,7 @@ impl TrayMenuState {
             theme_mechanical,
             theme_soft_companion,
             theme_flip,
+            theme_boundless,
             ontop,
         }
     }
@@ -68,6 +71,14 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     )?;
     let theme_flip =
         CheckMenuItem::with_id(app, "theme_flip", "Flip Clock", true, false, None::<&str>)?;
+    let theme_boundless = CheckMenuItem::with_id(
+        app,
+        "theme_boundless",
+        "Boundless 无界",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let ontop = CheckMenuItem::with_id(app, "toggle_ontop", "始终置顶", true, true, None::<&str>)?;
     let sep3 = PredefinedMenuItem::separator(app)?;
@@ -84,6 +95,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             &theme_mechanical,
             &theme_soft_companion,
             &theme_flip,
+            &theme_boundless,
             &sep2,
             &ontop,
             &sep3,
@@ -102,6 +114,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         theme_mechanical.clone(),
         theme_soft_companion.clone(),
         theme_flip.clone(),
+        theme_boundless.clone(),
         ontop.clone(),
     ));
 
@@ -121,6 +134,7 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
             "theme_mechanical" => set_theme_from_tray(app, "mechanical"),
             "theme_soft_companion" => set_theme_from_tray(app, "soft-companion"),
             "theme_flip" => set_theme_from_tray(app, "flip"),
+            "theme_boundless" => set_theme_from_tray(app, "boundless"),
             "toggle_ontop" => {
                 let checked = ontop_item.is_checked().unwrap_or(true);
                 if let Some(win) = app.get_webview_window("main") {
@@ -162,6 +176,7 @@ pub fn set_theme_checked(app: &AppHandle, theme: &str) {
             .theme_soft_companion
             .set_checked(theme == "soft-companion");
         let _ = state.theme_flip.set_checked(theme == "flip");
+        let _ = state.theme_boundless.set_checked(theme == "boundless");
     }
 }
 

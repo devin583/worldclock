@@ -80,6 +80,21 @@
   --face-stroke: rgba(255, 255, 255, 0.16);
 }
 
+.theme-boundless {
+  --clock-opacity: 0.86;
+  --object-base-rgb: 12 13 18;
+  --object-border: rgba(255, 255, 255, 0.14);
+  --object-shadow: none;
+  --surface-bg: rgba(12, 13, 18, 0.92);
+  --surface-border: rgba(255, 255, 255, 0.22);
+  --text-primary: rgba(255, 255, 255, 1);
+  --text-secondary: rgba(255, 255, 255, 0.82);
+  --text-muted: rgba(255, 255, 255, 0.64);
+  --accent-1: #f7f5f1;
+  --accent-2: #f7f5f1;
+  --face-stroke: rgba(255, 255, 255, 0.18);
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -281,6 +296,33 @@ body.pomodoro-done #object-shell {
     radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.16), transparent 38%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
     var(--object-bg);
+}
+
+.theme-boundless #main::before,
+.theme-boundless .clock-card::before {
+  display: none;
+}
+
+.theme-boundless #object-shell {
+  padding: clamp(10px, 3.4vw, 20px) clamp(12px, 3.8vw, 24px);
+}
+
+.theme-boundless #main {
+  gap: clamp(26px, 7vw, 54px);
+}
+
+.theme-boundless .clock-card {
+  min-width: min(42vw, 226px);
+  gap: 7px;
+}
+
+.theme-boundless .clock-card.mode-analog .digital-time,
+.theme-boundless .clock-card.mode-analog .digital-date {
+  display: flex;
+}
+
+.theme-boundless .analog-clock {
+  display: none !important;
 }
 
 .clock-card > * {
@@ -775,9 +817,98 @@ body.surface-open #mode-bar {
   height: clamp(30px, 11cqw, 44px);
 }
 
+.theme-boundless .city-label {
+  color: var(--text-muted);
+  font-size: clamp(9px, 4.2cqw, 12px);
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.22);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.86);
+}
+
+.theme-boundless .digital-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 1.8cqw, 6px);
+  color: var(--text-primary);
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.theme-boundless .flip-char {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: clamp(24px, 13cqw, 36px);
+  height: clamp(42px, 20cqw, 62px);
+  border-radius: clamp(7px, 3cqw, 11px);
+  color: var(--text-primary);
+  background: linear-gradient(180deg, rgba(56, 59, 68, 0.94) 0 49%, rgba(12, 13, 18, 0.96) 50% 100%);
+  border: 1px solid var(--object-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+    0 11px 22px rgba(0, 0, 0, 0.42);
+  font-weight: 820;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(14px) saturate(1.18);
+  -webkit-backdrop-filter: blur(14px) saturate(1.18);
+}
+
+.theme-boundless .flip-char::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: rgba(0, 0, 0, 0.62);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.theme-boundless .flip-char.is-changing {
+  animation: boundless-digit-refresh 180ms var(--ease-ui);
+}
+
+.theme-boundless .flip-sep {
+  display: inline-flex;
+  align-items: center;
+  height: clamp(42px, 20cqw, 62px);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78em;
+  font-weight: 800;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.84);
+  transform: translateY(-1px);
+}
+
+.theme-boundless .digital-date,
+.theme-boundless .offset-label {
+  color: var(--text-secondary);
+  font-size: clamp(9px, 3.8cqw, 12px);
+  font-weight: 720;
+  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.22);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 9px rgba(0, 0, 0, 0.82);
+}
+
+.theme-boundless .offset-label {
+  padding: 0;
+  min-height: 0;
+  background: transparent;
+  border: 0;
+}
+
 @keyframes digit-refresh {
   0% { filter: brightness(1.55); }
   100% { filter: brightness(1); }
+}
+
+@keyframes boundless-digit-refresh {
+  0% { filter: brightness(1.55) drop-shadow(0 0 8px rgba(255, 255, 255, 0.18)); }
+  100% { filter: brightness(1) drop-shadow(0 0 0 rgba(255, 255, 255, 0)); }
 }
 
 @keyframes companion-breathe {

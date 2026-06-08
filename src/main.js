@@ -42,7 +42,7 @@ const TIMEZONES = [
   'Atlantic/Reykjavik','UTC',
 ];
 
-const THEME_VALUES = ['minimal-glass', 'mechanical', 'soft-companion', 'flip'];
+const THEME_VALUES = ['minimal-glass', 'mechanical', 'soft-companion', 'flip', 'boundless'];
 const THEME_CLASSES = THEME_VALUES.map(theme => `theme-${theme}`);
 const LEGACY_THEME_MAP = {
   dark: 'minimal-glass',
@@ -226,7 +226,7 @@ function renderDigitalTime(index, value) {
   const el = document.getElementById(`digital-${index}`);
   if (!el) return;
 
-  if (config.theme !== 'flip') {
+  if (config.theme !== 'flip' && config.theme !== 'boundless') {
     el.textContent = value;
   } else {
     const previous = el.dataset.lastValue || '';
@@ -800,9 +800,13 @@ function collectHitRegions() {
   return [...document.querySelectorAll('[data-hit-region]')]
     .filter(isHitRegionVisible)
     .map(element => {
-      const rect = element.getBoundingClientRect();
-      const radius = Number(element.dataset.hitRadius || 12);
-      const pad = Number(element.dataset.hitPad || 0);
+      const isBoundlessCard = body.classList.contains('theme-boundless') && element.classList.contains('clock-card');
+      const rectSource = isBoundlessCard
+        ? element.querySelector('.digital-time') ?? element
+        : element;
+      const rect = rectSource.getBoundingClientRect();
+      const radius = isBoundlessCard ? 14 : Number(element.dataset.hitRadius || 12);
+      const pad = isBoundlessCard ? 12 : Number(element.dataset.hitPad || 0);
       const left = Math.max(0, rect.left - pad);
       const top = Math.max(0, rect.top - pad);
       const right = Math.min(window.innerWidth, rect.right + pad);
