@@ -226,15 +226,35 @@ function renderDigitalTime(index, value) {
   const el = document.getElementById(`digital-${index}`);
   if (!el) return;
 
-  if (config.theme !== 'flip' && config.theme !== 'boundless') {
-    el.textContent = value;
+  const chars = [...value];
+  const previous = el.dataset.lastValue || '';
+  const children = [...el.children];
+  const canPatch = previous.length === value.length && children.length === chars.length;
+
+  if (!canPatch) {
+    el.innerHTML = chars.map(char => (
+      char === ':'
+        ? '<span class="flip-sep">:</span>'
+        : `<span class="flip-char">${char}</span>`
+    )).join('');
   } else {
-    const previous = el.dataset.lastValue || '';
-    el.innerHTML = [...value].map((char, charIndex) => {
-      if (char === ':') return '<span class="flip-sep">:</span>';
-      const changedClass = previous[charIndex] && previous[charIndex] !== char ? ' is-changing' : '';
-      return `<span class="flip-char${changedClass}">${char}</span>`;
-    }).join('');
+    chars.forEach((char, charIndex) => {
+      const child = children[charIndex];
+      if (!child) return;
+      if (char === ':') {
+        child.className = 'flip-sep';
+        child.textContent = ':';
+        return;
+      }
+
+      child.className = 'flip-char';
+      if (child.textContent !== char) {
+        child.textContent = char;
+        child.classList.remove('is-changing');
+        void child.offsetWidth;
+        child.classList.add('is-changing');
+      }
+    });
   }
 
   if (value !== el.dataset.lastValue) {
@@ -800,15 +820,12 @@ function collectHitRegions() {
   return [...document.querySelectorAll('[data-hit-region]')]
     .filter(isHitRegionVisible)
     .map(element => {
-      const isBoundlessCard = body.classList.contains('theme-boundless') && element.classList.contains('clock-card');
-      const rectSource = isBoundlessCard && element.classList.contains('mode-analog')
-        ? element.querySelector('.analog-clock') ?? element
-        : (isBoundlessCard && !element.classList.contains('mode-both')
-          ? element.querySelector('.digital-time') ?? element
-          : element);
-      const rect = rectSource.getBoundingClientRect();
-      const radius = isBoundlessCard ? 14 : Number(element.dataset.hitRadius || 12);
-      const pad = isBoundlessCard ? 12 : Number(element.dataset.hitPad || 0);
+      const rect = element.classList.contains('clock-card')
+        ? visibleClockRect(element)
+        : element.getBoundingClientRect();
+      const isClockCard = element.classList.contains('clock-card');
+      const radius = isClockCard ? 14 : Number(element.dataset.hitRadius || 12);
+      const pad = isClockCard ? 12 : Number(element.dataset.hitPad || 0);
       const left = Math.max(0, rect.left - pad);
       const top = Math.max(0, rect.top - pad);
       const right = Math.min(window.innerWidth, rect.right + pad);
@@ -821,6 +838,34 @@ function collectHitRegions() {
         radius: Math.round((radius + pad) * scale),
       };
     });
+}
+
+function visibleClockRect(card) {
+  const visibleParts = [...card.querySelectorAll('.city-label, .digital-time, .digital-date, .analog-clock, .offset-label')]
+    .filter(part => {
+      if (part.classList.contains('offset-label') && !part.textContent.trim()) return false;
+      const style = window.getComputedStyle(part);
+      if (style.display === 'none' || style.visibility === 'hidden') return false;
+      const rect = part.getBoundingClientRect();
+      return rect.width > 1 && rect.height > 1;
+    })
+    .map(part => part.getBoundingClientRect());
+
+  if (!visibleParts.length) return card.getBoundingClientRect();
+
+  const left = Math.min(...visibleParts.map(rect => rect.left));
+  const top = Math.min(...visibleParts.map(rect => rect.top));
+  const right = Math.max(...visibleParts.map(rect => rect.right));
+  const bottom = Math.max(...visibleParts.map(rect => rect.bottom));
+
+  return {
+    left,
+    top,
+    right,
+    bottom,
+    width: right - left,
+    height: bottom - top,
+  };
 }
 
 function updateHitRegions() {
