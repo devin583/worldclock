@@ -209,16 +209,18 @@ function drawTicks(svgGroupId) {
   for (let i = 0; i < 60; i++) {
     const angle = (i / 60) * 360;
     const isHour = i % 5 === 0;
-    const r1 = isHour ? 80 : 88;
+    const r1 = isHour ? 78 : 88;
     const r2 = 93;
     const rad = (angle - 90) * Math.PI / 180;
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.classList.add(isHour ? 'tick-hour' : 'tick-minute');
     line.setAttribute('x1', 100 + r1 * Math.cos(rad));
     line.setAttribute('y1', 100 + r1 * Math.sin(rad));
     line.setAttribute('x2', 100 + r2 * Math.cos(rad));
     line.setAttribute('y2', 100 + r2 * Math.sin(rad));
-    line.setAttribute('stroke', 'var(--tick-color)');
-    line.setAttribute('stroke-width', isHour ? 2 : 1);
+    line.setAttribute('stroke', isHour ? 'var(--tick-hour)' : 'var(--tick-minute)');
+    line.setAttribute('stroke-width', isHour ? 3 : 1.3);
+    line.setAttribute('stroke-linecap', 'round');
     g.appendChild(line);
   }
 }
@@ -234,27 +236,20 @@ function renderDigitalTime(index, value) {
   const el = document.getElementById(`digital-${index}`);
   if (!el) return;
 
-  const chars = [...value];
+  const groups = value.split(':').map(group => group.padStart(2, '0').slice(-2));
+  const chars = groups.join('').split('');
   const previous = el.dataset.lastValue || '';
-  const children = [...el.children];
-  const canPatch = previous.length === value.length && children.length === chars.length;
+  const digits = [...el.querySelectorAll('.flip-char')];
+  const canPatch = previous.length === value.length && digits.length === chars.length;
 
   if (!canPatch) {
-    el.innerHTML = chars.map(char => (
-      char === ':'
-        ? '<span class="flip-sep">:</span>'
-        : `<span class="flip-char">${char}</span>`
+    el.innerHTML = groups.map(group => (
+      `<span class="time-group">${[...group].map(char => `<span class="flip-char">${char}</span>`).join('')}</span>`
     )).join('');
   } else {
     chars.forEach((char, charIndex) => {
-      const child = children[charIndex];
+      const child = digits[charIndex];
       if (!child) return;
-      if (char === ':') {
-        child.className = 'flip-sep';
-        child.textContent = ':';
-        return;
-      }
-
       child.className = 'flip-char';
       if (child.textContent !== char) {
         child.textContent = char;
