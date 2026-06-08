@@ -801,9 +801,11 @@ function collectHitRegions() {
     .filter(isHitRegionVisible)
     .map(element => {
       const isBoundlessCard = body.classList.contains('theme-boundless') && element.classList.contains('clock-card');
-      const rectSource = isBoundlessCard
-        ? element.querySelector('.digital-time') ?? element
-        : element;
+      const rectSource = isBoundlessCard && element.classList.contains('mode-analog')
+        ? element.querySelector('.analog-clock') ?? element
+        : (isBoundlessCard && !element.classList.contains('mode-both')
+          ? element.querySelector('.digital-time') ?? element
+          : element);
       const rect = rectSource.getBoundingClientRect();
       const radius = isBoundlessCard ? 14 : Number(element.dataset.hitRadius || 12);
       const pad = isBoundlessCard ? 12 : Number(element.dataset.hitPad || 0);

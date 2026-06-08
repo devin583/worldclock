@@ -316,13 +316,14 @@ body.pomodoro-done #object-shell {
   gap: 7px;
 }
 
-.theme-boundless .clock-card.mode-analog .digital-time,
-.theme-boundless .clock-card.mode-analog .digital-date {
-  display: flex;
+.theme-boundless .clock-card.mode-analog {
+  min-width: min(38vw, 188px);
+  gap: 9px;
 }
 
-.theme-boundless .analog-clock {
-  display: none !important;
+.theme-boundless .clock-card.mode-both {
+  min-width: min(40vw, 206px);
+  gap: 5px;
 }
 
 .clock-card > * {
@@ -818,13 +819,15 @@ body.surface-open #mode-bar {
 }
 
 .theme-boundless .city-label {
-  color: var(--text-muted);
+  color: rgba(31, 34, 42, 0.78);
   font-size: clamp(9px, 4.2cqw, 12px);
   font-weight: 800;
   letter-spacing: 0.16em;
-  -webkit-text-stroke: 2px rgba(0, 0, 0, 0.22);
+  -webkit-text-stroke: 2px rgba(255, 255, 255, 0.46);
   paint-order: stroke fill;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.86);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.36),
+    0 3px 10px rgba(0, 0, 0, 0.32);
 }
 
 .theme-boundless .digital-time {
@@ -877,21 +880,27 @@ body.surface-open #mode-bar {
   display: inline-flex;
   align-items: center;
   height: clamp(42px, 20cqw, 62px);
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(26, 28, 36, 0.82);
   font-size: 0.78em;
   font-weight: 800;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.84);
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.36);
+  paint-order: stroke fill;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.46),
+    0 2px 8px rgba(0, 0, 0, 0.34);
   transform: translateY(-1px);
 }
 
 .theme-boundless .digital-date,
 .theme-boundless .offset-label {
-  color: var(--text-secondary);
+  color: rgba(31, 34, 42, 0.76);
   font-size: clamp(9px, 3.8cqw, 12px);
   font-weight: 720;
-  -webkit-text-stroke: 1.5px rgba(0, 0, 0, 0.22);
+  -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.42);
   paint-order: stroke fill;
-  text-shadow: 0 2px 9px rgba(0, 0, 0, 0.82);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.36),
+    0 3px 9px rgba(0, 0, 0, 0.30);
 }
 
 .theme-boundless .offset-label {
@@ -899,6 +908,76 @@ body.surface-open #mode-bar {
   min-height: 0;
   background: transparent;
   border: 0;
+}
+
+.theme-boundless .analog-clock {
+  width: clamp(104px, 54cqw, 158px);
+  height: clamp(104px, 54cqw, 158px);
+  filter:
+    drop-shadow(0 6px 10px rgba(0, 0, 0, 0.38))
+    drop-shadow(0 0 12px rgba(255, 255, 255, 0.08));
+}
+
+.theme-boundless .clock-face {
+  fill: transparent;
+  stroke: rgba(28, 30, 38, 0.34);
+  stroke-width: 1.4;
+  stroke-dasharray: 2 9;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.52));
+}
+
+.theme-boundless .hand {
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.78))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.48));
+}
+
+.theme-boundless .hour-hand {
+  stroke: rgba(29, 31, 39, 0.94);
+  stroke-width: 7.4;
+}
+
+.theme-boundless .minute-hand {
+  stroke: rgba(44, 48, 58, 0.86);
+  stroke-width: 5;
+}
+
+.theme-boundless .second-hand {
+  stroke: #ffd866;
+  stroke-width: 2.2;
+}
+
+.theme-boundless #card-2 .second-hand {
+  stroke: #8ee8ff;
+}
+
+.theme-boundless .center-dot {
+  fill: rgba(28, 30, 38, 0.96);
+  filter:
+    drop-shadow(0 0 2px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.54));
+}
+
+.theme-boundless .clock-card.mode-both .analog-clock {
+  width: clamp(70px, 34cqw, 104px);
+  height: clamp(70px, 34cqw, 104px);
+  margin-top: 1px;
+}
+
+.theme-boundless .clock-card.mode-both .flip-char {
+  min-width: clamp(18px, 8.8cqw, 27px);
+  height: clamp(32px, 14cqw, 44px);
+  border-radius: clamp(6px, 2.4cqw, 9px);
+}
+
+.theme-boundless .clock-card.mode-both .flip-sep {
+  height: clamp(32px, 14cqw, 44px);
+}
+
+.theme-boundless .clock-card.mode-both .city-label,
+.theme-boundless .clock-card.mode-both .digital-date,
+.theme-boundless .clock-card.mode-both .offset-label {
+  font-size: clamp(8px, 3.3cqw, 10px);
 }
 
 @keyframes digit-refresh {
