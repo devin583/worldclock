@@ -305,6 +305,36 @@ body.pomodoro-done #object-shell {
   display: none;
 }
 
+body.surface-solid #main::before,
+body.surface-solid .clock-card::before {
+  display: block;
+}
+
+body.surface-solid #main {
+  gap: clamp(44px, 9vw, 78px);
+}
+
+body.surface-solid .clock-card::before {
+  width: calc(100% + 42px);
+  height: calc(100% + 34px);
+  border-radius: 34px;
+}
+
+body.surface-solid.theme-mechanical .clock-card::before,
+body.surface-solid.theme-boundless .clock-card::before {
+  border-radius: 36px;
+}
+
+body.surface-solid.theme-soft-companion .clock-card::before {
+  width: calc(100% + 34px);
+  height: calc(100% + 30px);
+  border-radius: 34px 42px 38px 36px;
+}
+
+body.surface-solid.clock-count-1 #main {
+  gap: 0;
+}
+
 .theme-boundless #object-shell {
   padding: clamp(10px, 3.4vw, 20px) clamp(12px, 3.8vw, 24px);
 }

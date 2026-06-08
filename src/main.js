@@ -44,6 +44,8 @@ const TIMEZONES = [
 
 const THEME_VALUES = ['minimal-glass', 'mechanical', 'soft-companion', 'flip', 'boundless'];
 const THEME_CLASSES = THEME_VALUES.map(theme => `theme-${theme}`);
+const SURFACE_STYLE_VALUES = ['transparent', 'solid'];
+const SURFACE_STYLE_CLASSES = SURFACE_STYLE_VALUES.map(style => `surface-${style}`);
 const LEGACY_THEME_MAP = {
   dark: 'minimal-glass',
   light: 'minimal-glass',
@@ -65,6 +67,7 @@ const DEFAULT_CONFIG = {
   locked: false,
   on_top: true,
   theme: 'minimal-glass',
+  surfaceStyle: 'transparent',
   timeFormat: '24',
   opacity: 0.88,
   autostart: false,
@@ -123,6 +126,10 @@ function normalizeMode(mode) {
   return MODE_VALUES.includes(mode) ? mode : DEFAULT_CONFIG.mode;
 }
 
+function normalizeSurfaceStyle(style) {
+  return SURFACE_STYLE_VALUES.includes(style) ? style : DEFAULT_CONFIG.surfaceStyle;
+}
+
 function normalizeTimeFormat(value) {
   return TIME_FORMAT_VALUES.includes(String(value)) ? String(value) : DEFAULT_CONFIG.timeFormat;
 }
@@ -162,6 +169,7 @@ function normalizeConfig(saved = {}) {
     clockCount: normalizeClockCount(source.clockCount ?? DEFAULT_CONFIG.clockCount),
     mode: normalizeMode(source.mode),
     theme: normalizeTheme(source.theme),
+    surfaceStyle: normalizeSurfaceStyle(source.surfaceStyle),
     timeFormat: normalizeTimeFormat(source.timeFormat),
     opacity: clampNumber(source.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
     locked: Boolean(source.locked),
@@ -502,6 +510,16 @@ function applyTheme(theme) {
   scheduleHitRegionUpdate();
 }
 
+function applySurfaceStyle(style) {
+  config.surfaceStyle = normalizeSurfaceStyle(style);
+  body.classList.remove(...SURFACE_STYLE_CLASSES);
+  body.classList.add(`surface-${config.surfaceStyle}`);
+  document.querySelectorAll('input[name="surface-style"]').forEach(input => {
+    input.checked = input.value === config.surfaceStyle;
+  });
+  scheduleHitRegionUpdate();
+}
+
 function applyClockCount(count) {
   config.clockCount = normalizeClockCount(count);
   body.classList.toggle('clock-count-1', config.clockCount === 1);
@@ -661,6 +679,9 @@ function openSettings(anchor = anchorFromElement(btnSettings)) {
   document.querySelectorAll('input[name="theme"]').forEach(input => {
     input.checked = input.value === config.theme;
   });
+  document.querySelectorAll('input[name="surface-style"]').forEach(input => {
+    input.checked = input.value === config.surfaceStyle;
+  });
   document.querySelectorAll('input[name="time-format"]').forEach(input => {
     input.checked = input.value === config.timeFormat;
   });
@@ -687,6 +708,7 @@ async function applySettings() {
   );
 
   applyTheme(document.querySelector('input[name="theme"]:checked')?.value ?? config.theme);
+  applySurfaceStyle(document.querySelector('input[name="surface-style"]:checked')?.value ?? config.surfaceStyle);
   applyTimeFormat(document.querySelector('input[name="time-format"]:checked')?.value ?? config.timeFormat);
   applyOpacity(document.getElementById('set-opacity').value);
   applyOnTop(document.getElementById('set-ontop').checked);
@@ -817,15 +839,16 @@ function isHitRegionVisible(element) {
 
 function collectHitRegions() {
   const scale = window.devicePixelRatio || 1;
+  const isSolidSurface = body.classList.contains('surface-solid');
   return [...document.querySelectorAll('[data-hit-region]')]
     .filter(isHitRegionVisible)
     .map(element => {
-      const rect = element.classList.contains('clock-card')
+      const isClockCard = element.classList.contains('clock-card');
+      const rect = isClockCard && !isSolidSurface
         ? visibleClockRect(element)
         : element.getBoundingClientRect();
-      const isClockCard = element.classList.contains('clock-card');
-      const radius = isClockCard ? 14 : Number(element.dataset.hitRadius || 12);
-      const pad = isClockCard ? 12 : Number(element.dataset.hitPad || 0);
+      const radius = isClockCard && !isSolidSurface ? 14 : Number(element.dataset.hitRadius || 12);
+      const pad = isClockCard && !isSolidSurface ? 12 : Number(element.dataset.hitPad || 0);
       const left = Math.max(0, rect.left - pad);
       const top = Math.max(0, rect.top - pad);
       const right = Math.min(window.innerWidth, rect.right + pad);
@@ -906,6 +929,7 @@ async function init() {
     document.getElementById('label-2').textContent = config.clocks[1].label;
 
     applyTheme(config.theme);
+    applySurfaceStyle(config.surfaceStyle);
     applyClockCount(config.clockCount);
     applyMode(config.mode);
     applyTimeFormat(config.timeFormat);
