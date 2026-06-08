@@ -229,17 +229,16 @@ function renderDigitalTime(index, value) {
   if (config.theme !== 'flip') {
     el.textContent = value;
   } else {
-    el.innerHTML = [...value].map(char => {
+    const previous = el.dataset.lastValue || '';
+    el.innerHTML = [...value].map((char, charIndex) => {
       if (char === ':') return '<span class="flip-sep">:</span>';
-      return `<span class="flip-char">${char}</span>`;
+      const changedClass = previous[charIndex] && previous[charIndex] !== char ? ' is-changing' : '';
+      return `<span class="flip-char${changedClass}">${char}</span>`;
     }).join('');
   }
 
   if (value !== el.dataset.lastValue) {
     el.dataset.lastValue = value;
-    el.classList.remove('time-pulse');
-    void el.offsetWidth;
-    el.classList.add('time-pulse');
   }
 }
 

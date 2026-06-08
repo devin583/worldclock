@@ -4,16 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link rel="stylesheet" href="style.css?v=readable1" />
+  <link rel="stylesheet" href="style.css?v=silhouette1" />
 </head>
 <body class="theme-minimal-glass clock-count-2">
   <div id="stage">
     <section id="clock-body" aria-label="WorldClock clock body">
-      <div id="object-shell" data-hit-region data-hit-radius="42" data-hit-pad="34">
+      <div id="object-shell">
         <div id="progress-ring" aria-hidden="true"></div>
 
         <div id="main">
-          <div class="clock-card" id="card-1">
+          <div class="clock-card" id="card-1" data-hit-region data-hit-radius="42" data-hit-pad="34">
             <div class="city-label" id="label-1">Budapest</div>
             <div class="digital-time" id="digital-1">00:00:00</div>
             <div class="digital-date" id="date-1">Mon, 01 Jan</div>
@@ -30,7 +30,7 @@
             <div class="offset-label" id="offset-1"></div>
           </div>
 
-          <div class="clock-card" id="card-2">
+          <div class="clock-card" id="card-2" data-hit-region data-hit-radius="42" data-hit-pad="34">
             <div class="city-label" id="label-2">Beijing</div>
             <div class="digital-time" id="digital-2">00:00:00</div>
             <div class="digital-date" id="date-2">Mon, 01 Jan</div>
@@ -200,6 +200,6 @@
       }
     });
   </script>
-  <script src="main.js?v=readable1"></script>
+  <script src="main.js?v=silhouette1"></script>
 </body>
 </html>

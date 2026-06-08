@@ -139,20 +139,13 @@ button {
   min-width: min(92vw, 500px);
   max-width: min(96vw, 720px);
   padding: clamp(16px, 4.8vw, 28px) clamp(20px, 5.6vw, 36px);
-  border: 1px solid var(--object-border);
-  border-radius: 48px;
-  background:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.24), transparent 20%),
-    radial-gradient(circle at 88% 84%, rgba(142, 220, 255, 0.18), transparent 28%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 42%, rgba(0, 0, 0, 0.18)),
-    var(--object-bg);
-  box-shadow: var(--object-shadow);
-  backdrop-filter: blur(18px) saturate(1.15);
-  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   transition:
     transform 180ms var(--ease-out),
-    border-color 180ms var(--ease-ui),
-    background 240ms var(--ease-ui);
+    filter 180ms var(--ease-ui);
 }
 
 #object-shell:hover {
@@ -160,20 +153,10 @@ button {
 }
 
 .theme-mechanical #object-shell {
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at center, rgba(255, 230, 189, 0.12), transparent 54%),
-    linear-gradient(135deg, rgba(91, 65, 34, 0.30), rgba(15, 12, 9, 0.34)),
-    var(--object-bg);
+  border-radius: 0;
 }
 
 .theme-soft-companion #object-shell {
-  border-radius: 54px 64px 58px 46px;
-  background:
-    radial-gradient(circle at 12% 18%, rgba(255, 212, 121, 0.28), transparent 20%),
-    radial-gradient(circle at 86% 22%, rgba(143, 240, 210, 0.22), transparent 20%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.14)),
-    var(--object-bg);
   animation: companion-breathe 8s var(--ease-ui) infinite;
 }
 
@@ -191,17 +174,13 @@ button {
 }
 
 .theme-flip #object-shell {
-  border-radius: 30px;
-  background:
-    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.16), transparent 38%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
-    var(--object-bg);
+  border-radius: 0;
 }
 
 #progress-ring {
   position: absolute;
   inset: -7px;
-  border-radius: inherit;
+  border-radius: 999px;
   pointer-events: none;
   opacity: 0;
   background:
@@ -231,6 +210,20 @@ body.pomodoro-done #object-shell {
   z-index: 1;
 }
 
+#main::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 24%;
+  bottom: 18%;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgb(var(--object-base-rgb) / 0.30), transparent 72%);
+  filter: blur(18px);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .clock-card {
   position: relative;
   container-type: inline-size;
@@ -248,14 +241,46 @@ body.pomodoro-done #object-shell {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: min(118%, 260px);
-  height: 76%;
-  border-radius: 999px;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.20) 48%, transparent 74%);
-  filter: blur(1px);
+  width: min(126%, 284px);
+  height: calc(100% + 42px);
+  border: 1px solid var(--object-border);
+  border-radius: 48% 52% 50% 46% / 58% 54% 48% 52%;
+  background:
+    radial-gradient(circle at 18% 16%, rgba(255, 255, 255, 0.24), transparent 23%),
+    radial-gradient(circle at 86% 78%, rgba(142, 232, 255, 0.12), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 42%, rgba(0, 0, 0, 0.18)),
+    var(--object-bg);
+  box-shadow: var(--object-shadow);
+  backdrop-filter: blur(18px) saturate(1.14);
+  -webkit-backdrop-filter: blur(18px) saturate(1.14);
   pointer-events: none;
   transform: translate(-50%, -50%);
   z-index: 0;
+}
+
+.theme-mechanical .clock-card::before {
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at center, rgba(255, 230, 189, 0.12), transparent 54%),
+    linear-gradient(135deg, rgba(91, 65, 34, 0.30), rgba(15, 12, 9, 0.34)),
+    var(--object-bg);
+}
+
+.theme-soft-companion .clock-card::before {
+  border-radius: 54% 46% 52% 48% / 48% 58% 46% 54%;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 212, 121, 0.28), transparent 20%),
+    radial-gradient(circle at 86% 22%, rgba(143, 240, 210, 0.22), transparent 20%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.14)),
+    var(--object-bg);
+}
+
+.theme-flip .clock-card::before {
+  border-radius: 32px 38px 34px 30px;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
+    var(--object-bg);
 }
 
 .clock-card > * {
@@ -298,7 +323,7 @@ body.clock-count-1 #card-2,
     0 2px 2px rgba(0, 0, 0, 0.82),
     0 10px 26px rgba(0, 0, 0, 0.58),
     0 0 18px rgba(255, 216, 102, 0.22);
-  transition: opacity 120ms var(--ease-ui), transform 140ms var(--ease-ui);
+  transition: opacity 120ms var(--ease-ui);
 }
 
 #card-2 .digital-time {
@@ -307,10 +332,6 @@ body.clock-count-1 #card-2,
     0 2px 2px rgba(0, 0, 0, 0.82),
     0 10px 26px rgba(0, 0, 0, 0.58),
     0 0 18px rgba(142, 232, 255, 0.24);
-}
-
-.digital-time.time-pulse {
-  animation: time-tick 180ms var(--ease-ui);
 }
 
 .digital-date,
@@ -736,6 +757,10 @@ body.surface-open #mode-bar {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.theme-flip .flip-char.is-changing {
+  animation: digit-refresh 180ms var(--ease-ui);
+}
+
 .theme-flip .flip-sep {
   display: inline-flex;
   align-items: center;
@@ -750,9 +775,9 @@ body.surface-open #mode-bar {
   height: clamp(30px, 11cqw, 44px);
 }
 
-@keyframes time-tick {
-  0% { opacity: 0.78; transform: translateY(3px); }
-  100% { opacity: 1; transform: translateY(0); }
+@keyframes digit-refresh {
+  0% { filter: brightness(1.55); }
+  100% { filter: brightness(1); }
 }
 
 @keyframes companion-breathe {
