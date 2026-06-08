@@ -66,7 +66,7 @@ const DEFAULT_CONFIG = {
   on_top: true,
   theme: 'minimal-glass',
   timeFormat: '24',
-  opacity: 0.9,
+  opacity: 0.88,
   autostart: false,
   pomodoro: {
     focusMinutes: 25,
@@ -163,7 +163,7 @@ function normalizeConfig(saved = {}) {
     mode: normalizeMode(source.mode),
     theme: normalizeTheme(source.theme),
     timeFormat: normalizeTimeFormat(source.timeFormat),
-    opacity: clampNumber(source.opacity, 0.55, 1, DEFAULT_CONFIG.opacity),
+    opacity: clampNumber(source.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
     locked: Boolean(source.locked),
     on_top: source.on_top !== false,
     autostart: Boolean(source.autostart),
@@ -497,7 +497,7 @@ function applyClockCount(count) {
 }
 
 function applyOpacity(value) {
-  config.opacity = clampNumber(value, 0.55, 1, DEFAULT_CONFIG.opacity);
+  config.opacity = clampNumber(value, 0.72, 1, DEFAULT_CONFIG.opacity);
   body.style.setProperty('--clock-opacity', String(config.opacity));
   menuOpacity.value = String(config.opacity);
   setOpacity.value = String(config.opacity);

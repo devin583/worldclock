@@ -1,78 +1,79 @@
 :root {
-  --clock-opacity: 0.9;
-  --object-bg: rgba(18, 24, 31, 0.28);
-  --object-border: rgba(255, 255, 255, 0.20);
-  --object-shadow: 0 20px 70px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.24);
-  --surface-bg: rgba(18, 22, 29, 0.84);
-  --surface-border: rgba(255, 255, 255, 0.18);
-  --control-bg: rgba(255, 255, 255, 0.11);
-  --control-active: rgba(255, 255, 255, 0.22);
-  --control-hover: rgba(255, 255, 255, 0.18);
-  --text-primary: rgba(248, 251, 255, 0.94);
-  --text-secondary: rgba(232, 241, 255, 0.78);
-  --text-muted: rgba(232, 241, 255, 0.58);
-  --accent-1: #f7d476;
-  --accent-2: #8edcff;
-  --face-fill: rgba(255, 255, 255, 0.035);
-  --face-stroke: rgba(255, 255, 255, 0.22);
-  --tick-color: rgba(255, 255, 255, 0.34);
-  --hand-hour: rgba(255, 255, 255, 0.9);
-  --hand-minute: rgba(230, 244, 255, 0.76);
+  --clock-opacity: 0.88;
+  --object-base-rgb: 8 14 23;
+  --object-bg: rgb(var(--object-base-rgb) / var(--clock-opacity));
+  --object-border: rgba(255, 255, 255, 0.34);
+  --object-shadow: 0 24px 72px rgba(0, 0, 0, 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  --surface-bg: rgba(11, 14, 20, 0.94);
+  --surface-border: rgba(255, 255, 255, 0.24);
+  --control-bg: rgba(255, 255, 255, 0.14);
+  --control-active: rgba(255, 255, 255, 0.28);
+  --control-hover: rgba(255, 255, 255, 0.22);
+  --text-primary: rgba(252, 254, 255, 1);
+  --text-secondary: rgba(246, 250, 255, 0.92);
+  --text-muted: rgba(238, 246, 255, 0.80);
+  --accent-1: #ffd866;
+  --accent-2: #8ee8ff;
+  --face-fill: rgba(255, 255, 255, 0.07);
+  --face-stroke: rgba(255, 255, 255, 0.34);
+  --tick-color: rgba(255, 255, 255, 0.54);
+  --hand-hour: rgba(255, 255, 255, 0.98);
+  --hand-minute: rgba(235, 246, 255, 0.92);
   --dot-color: #fff;
-  --input-bg: rgba(255, 255, 255, 0.12);
-  --input-border: rgba(255, 255, 255, 0.20);
+  --input-bg: rgba(255, 255, 255, 0.16);
+  --input-border: rgba(255, 255, 255, 0.30);
   --progress: 0deg;
   --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .theme-mechanical {
-  --object-bg: rgba(30, 28, 24, 0.20);
-  --object-border: rgba(241, 199, 121, 0.32);
-  --object-shadow: 0 22px 64px rgba(20, 13, 6, 0.34), inset 0 0 0 1px rgba(255, 229, 177, 0.08);
-  --surface-bg: rgba(31, 27, 22, 0.88);
-  --surface-border: rgba(241, 199, 121, 0.24);
+  --object-base-rgb: 31 25 17;
+  --object-border: rgba(255, 212, 137, 0.46);
+  --object-shadow: 0 24px 72px rgba(18, 10, 4, 0.50), inset 0 0 0 1px rgba(255, 229, 177, 0.14);
+  --surface-bg: rgba(28, 23, 17, 0.95);
+  --surface-border: rgba(241, 199, 121, 0.34);
   --control-bg: rgba(241, 199, 121, 0.10);
   --control-active: rgba(241, 199, 121, 0.22);
   --control-hover: rgba(241, 199, 121, 0.18);
-  --text-primary: rgba(255, 243, 218, 0.94);
-  --text-secondary: rgba(255, 230, 189, 0.62);
-  --text-muted: rgba(255, 230, 189, 0.42);
-  --accent-1: #efc06a;
-  --accent-2: #d99c54;
-  --face-fill: rgba(239, 192, 106, 0.04);
-  --face-stroke: rgba(239, 192, 106, 0.35);
-  --tick-color: rgba(255, 230, 189, 0.44);
-  --hand-minute: rgba(255, 230, 189, 0.74);
+  --text-primary: rgba(255, 248, 232, 1);
+  --text-secondary: rgba(255, 235, 199, 0.88);
+  --text-muted: rgba(255, 228, 180, 0.72);
+  --accent-1: #ffd27a;
+  --accent-2: #f3a85c;
+  --face-fill: rgba(239, 192, 106, 0.08);
+  --face-stroke: rgba(239, 192, 106, 0.52);
+  --tick-color: rgba(255, 230, 189, 0.64);
+  --hand-minute: rgba(255, 230, 189, 0.92);
 }
 
 .theme-soft-companion {
-  --object-bg: rgba(41, 52, 62, 0.18);
-  --object-border: rgba(255, 255, 255, 0.24);
-  --object-shadow: 0 24px 72px rgba(8, 24, 30, 0.30), inset 0 1px 0 rgba(255, 255, 255, 0.28);
-  --surface-bg: rgba(28, 37, 48, 0.86);
-  --surface-border: rgba(255, 255, 255, 0.22);
+  --object-base-rgb: 21 39 47;
+  --object-border: rgba(255, 255, 255, 0.36);
+  --object-shadow: 0 24px 72px rgba(6, 22, 28, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  --surface-bg: rgba(21, 31, 41, 0.94);
+  --surface-border: rgba(255, 255, 255, 0.30);
   --control-bg: rgba(255, 255, 255, 0.13);
   --control-active: rgba(255, 255, 255, 0.25);
   --control-hover: rgba(255, 255, 255, 0.20);
-  --text-primary: rgba(255, 251, 242, 0.96);
-  --text-secondary: rgba(255, 246, 226, 0.66);
-  --text-muted: rgba(255, 246, 226, 0.44);
+  --text-primary: rgba(255, 253, 248, 1);
+  --text-secondary: rgba(255, 248, 232, 0.88);
+  --text-muted: rgba(255, 241, 211, 0.72);
   --accent-1: #ffd479;
   --accent-2: #8ff0d2;
-  --face-fill: rgba(255, 212, 121, 0.05);
-  --face-stroke: rgba(255, 255, 255, 0.22);
+  --face-fill: rgba(255, 212, 121, 0.08);
+  --face-stroke: rgba(255, 255, 255, 0.36);
 }
 
 .theme-flip {
-  --object-bg: rgba(10, 10, 12, 0.26);
-  --object-border: rgba(255, 255, 255, 0.12);
-  --object-shadow: 0 24px 72px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  --surface-bg: rgba(14, 14, 17, 0.90);
-  --surface-border: rgba(255, 255, 255, 0.14);
-  --text-primary: rgba(255, 255, 255, 0.94);
-  --text-secondary: rgba(255, 255, 255, 0.58);
-  --text-muted: rgba(255, 255, 255, 0.36);
+  --object-base-rgb: 8 8 11;
+  --object-border: rgba(255, 255, 255, 0.28);
+  --object-shadow: 0 26px 76px rgba(0, 0, 0, 0.56), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --surface-bg: rgba(12, 12, 15, 0.96);
+  --surface-border: rgba(255, 255, 255, 0.24);
+  --text-primary: rgba(255, 255, 255, 1);
+  --text-secondary: rgba(255, 255, 255, 0.84);
+  --text-muted: rgba(255, 255, 255, 0.68);
   --accent-1: #ffcc66;
   --accent-2: #91d8ff;
   --face-fill: rgba(255, 255, 255, 0.04);
@@ -141,15 +142,14 @@ button {
   border: 1px solid var(--object-border);
   border-radius: 48px;
   background:
-    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.24), transparent 23%),
-    radial-gradient(circle at 88% 84%, rgba(142, 220, 255, 0.14), transparent 28%),
+    radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.24), transparent 20%),
+    radial-gradient(circle at 88% 84%, rgba(142, 220, 255, 0.18), transparent 28%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.02) 42%, rgba(0, 0, 0, 0.18)),
     var(--object-bg);
   box-shadow: var(--object-shadow);
-  opacity: var(--clock-opacity);
   backdrop-filter: blur(18px) saturate(1.15);
   -webkit-backdrop-filter: blur(18px) saturate(1.15);
   transition:
-    opacity 180ms var(--ease-ui),
     transform 180ms var(--ease-out),
     border-color 180ms var(--ease-ui),
     background 240ms var(--ease-ui);
@@ -162,15 +162,17 @@ button {
 .theme-mechanical #object-shell {
   border-radius: 999px;
   background:
-    radial-gradient(circle at center, rgba(255, 230, 189, 0.05), transparent 56%),
-    linear-gradient(135deg, rgba(64, 51, 36, 0.22), rgba(24, 22, 20, 0.28));
+    radial-gradient(circle at center, rgba(255, 230, 189, 0.12), transparent 54%),
+    linear-gradient(135deg, rgba(91, 65, 34, 0.30), rgba(15, 12, 9, 0.34)),
+    var(--object-bg);
 }
 
 .theme-soft-companion #object-shell {
   border-radius: 54px 64px 58px 46px;
   background:
-    radial-gradient(circle at 12% 18%, rgba(255, 212, 121, 0.22), transparent 22%),
-    radial-gradient(circle at 86% 22%, rgba(143, 240, 210, 0.17), transparent 20%),
+    radial-gradient(circle at 12% 18%, rgba(255, 212, 121, 0.28), transparent 20%),
+    radial-gradient(circle at 86% 22%, rgba(143, 240, 210, 0.22), transparent 20%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(0, 0, 0, 0.14)),
     var(--object-bg);
   animation: companion-breathe 8s var(--ease-ui) infinite;
 }
@@ -191,7 +193,8 @@ button {
 .theme-flip #object-shell {
   border-radius: 30px;
   background:
-    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.10), transparent 40%),
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.16), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.22)),
     var(--object-bg);
 }
 
@@ -240,6 +243,26 @@ body.pomodoro-done #object-shell {
   gap: clamp(4px, 1.8cqw, 9px);
 }
 
+.clock-card::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(118%, 260px);
+  height: 76%;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.20) 48%, transparent 74%);
+  filter: blur(1px);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.clock-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 body.clock-count-1 #main {
   min-width: min(74vw, 360px);
 }
@@ -256,26 +279,34 @@ body.clock-count-1 #card-2,
 .city-label {
   color: var(--text-muted);
   font-size: clamp(10px, 4.8cqw, 14px);
-  font-weight: 700;
+  font-weight: 820;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.72);
 }
 
 .digital-time {
   color: var(--accent-1);
   font-family: "Cascadia Mono", "Cascadia Code", "Segoe UI Mono", ui-monospace, monospace;
-  font-size: clamp(38px, 18cqw, 62px);
-  font-weight: 620;
+  font-size: clamp(42px, 19cqw, 66px);
+  font-weight: 780;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 0.98;
-  text-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+  text-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.82),
+    0 10px 26px rgba(0, 0, 0, 0.58),
+    0 0 18px rgba(255, 216, 102, 0.22);
   transition: opacity 120ms var(--ease-ui), transform 140ms var(--ease-ui);
 }
 
 #card-2 .digital-time {
   color: var(--accent-2);
+  text-shadow:
+    0 2px 2px rgba(0, 0, 0, 0.82),
+    0 10px 26px rgba(0, 0, 0, 0.58),
+    0 0 18px rgba(142, 232, 255, 0.24);
 }
 
 .digital-time.time-pulse {
@@ -285,16 +316,19 @@ body.clock-count-1 #card-2,
 .digital-date,
 .offset-label {
   color: var(--text-secondary);
-  font-size: clamp(10px, 4.2cqw, 13px);
+  font-size: clamp(11px, 4.4cqw, 14px);
+  font-weight: 650;
   letter-spacing: 0.02em;
   white-space: nowrap;
+  text-shadow: 0 2px 9px rgba(0, 0, 0, 0.76);
 }
 
 .offset-label {
   min-height: 18px;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .offset-label:empty {
@@ -356,9 +390,12 @@ body.clock-count-1 #card-2,
   padding: 4px 10px;
   border-radius: 999px;
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(0, 0, 0, 0.38);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   font-size: 11px;
+  font-weight: 750;
   letter-spacing: 0.04em;
+  text-shadow: 0 2px 7px rgba(0, 0, 0, 0.72);
   transition: opacity 160ms var(--ease-ui), transform 180ms var(--ease-ui);
 }
 
@@ -679,9 +716,13 @@ body.surface-open #mode-bar {
   height: clamp(40px, 15cqw, 62px);
   border-radius: 8px;
   color: var(--text-primary);
-  background: linear-gradient(180deg, #24262d 0 49%, #15171c 50% 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 6px 14px rgba(0, 0, 0, 0.32);
-  text-shadow: 0 1px 0 #000;
+  background: linear-gradient(180deg, #30333c 0 49%, #101218 50% 100%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.70),
+    0 8px 18px rgba(0, 0, 0, 0.48);
+  text-shadow: 0 2px 2px #000, 0 0 12px rgba(255, 255, 255, 0.22);
 }
 
 .theme-flip .flip-char::after {
@@ -699,7 +740,8 @@ body.surface-open #mode-bar {
   display: inline-flex;
   align-items: center;
   height: clamp(40px, 15cqw, 62px);
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.88);
   transform: translateY(-1px);
 }
 

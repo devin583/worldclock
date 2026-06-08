@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link rel="stylesheet" href="style.css?v=object1" />
+  <link rel="stylesheet" href="style.css?v=readable1" />
 </head>
 <body class="theme-minimal-glass clock-count-2">
   <div id="stage">
@@ -98,8 +98,8 @@
       <button data-menu-action="toggle-lock" id="menu-lock">锁定位置</button>
       <button data-menu-action="toggle-ontop" id="menu-ontop">始终置顶</button>
       <label class="menu-range">
-        <span>透明度</span>
-        <input type="range" id="menu-opacity" min="0.55" max="1" step="0.05" value="0.9" />
+        <span>背景透明度</span>
+        <input type="range" id="menu-opacity" min="0.72" max="1" step="0.04" value="0.88" />
       </label>
       <button data-menu-action="open-settings">打开设置</button>
     </nav>
@@ -153,8 +153,8 @@
       </section>
 
       <section>
-        <label for="set-opacity">透明度</label>
-        <input type="range" id="set-opacity" min="0.55" max="1" step="0.05" value="0.9" />
+        <label for="set-opacity">背景透明度</label>
+        <input type="range" id="set-opacity" min="0.72" max="1" step="0.04" value="0.88" />
       </section>
 
       <section>
@@ -200,6 +200,6 @@
       }
     });
   </script>
-  <script src="main.js?v=object1"></script>
+  <script src="main.js?v=readable1"></script>
 </body>
 </html>
