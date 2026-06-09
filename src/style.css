@@ -268,8 +268,6 @@ body.surface-open #mode-bar {
 #context-menu {
   width: 190px;
   padding: 7px;
-  max-height: calc(100vh - 16px);
-  overflow-y: auto;
 }
 #context-menu button,
 #context-menu .menu-range {
