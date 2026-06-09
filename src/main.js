@@ -437,19 +437,16 @@ function positionSurface(el, x, y, offset = 10) {
   el.classList.remove('hidden');
   el.style.left = '0px'; el.style.top = '0px';
 
-  // After unhiding, rect reflects the clamped max-height
   const rect = el.getBoundingClientRect();
   const m = 8;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
 
-  // Try right/below first; flip left/above if it overflows
   let left = x + offset;
   let top  = y + offset;
   if (left + rect.width  > vw - m) left = x - rect.width  - offset;
   if (top  + rect.height > vh - m) top  = y - rect.height - offset;
 
-  // Hard clamp so it never goes off-screen even if there's no room to flip
   left = Math.round(Math.max(m, Math.min(vw - rect.width  - m, left)));
   top  = Math.round(Math.max(m, Math.min(vh - rect.height - m, top)));
 
@@ -465,10 +462,66 @@ function anchorFromElement(el) {
   return { x: r.left + r.width / 2, y: r.bottom };
 }
 
-function openContextMenu(event) {
+// Returns screen bounds in viewport-relative CSS px; null if unavailable.
+async function getDisplayBounds() {
+  if (!isTauri) return null;
+  try {
+    const winMod = tauriApi.window;
+    if (!winMod) return null;
+    const win = winMod.getCurrentWindow?.();
+    if (!win || typeof win.outerPosition !== 'function') return null;
+    const [outerPos, monitor] = await Promise.all([
+      win.outerPosition(),
+      winMod.currentMonitor?.(),
+    ]);
+    if (!outerPos || !monitor) return null;
+    const sf = monitor.scaleFactor ?? 1;
+    const mL = monitor.position.x / sf;
+    const mT = monitor.position.y / sf;
+    const mR = mL + monitor.size.width / sf;
+    const mB = mT + monitor.size.height / sf;
+    const wL = outerPos.x / sf;
+    const wT = outerPos.y / sf;
+    return { left: mL - wL, top: mT - wT, right: mR - wL, bottom: mB - wT };
+  } catch {
+    return null;
+  }
+}
+
+async function openContextMenu(event) {
   event.preventDefault();
   closeSettings(); syncMenuLabels();
-  positionSurface(contextMenu, event.clientX, event.clientY, 2);
+
+  const cx = event.clientX;
+  const cy = event.clientY;
+
+  // Unhide at origin to measure natural dimensions
+  contextMenu.classList.remove('hidden');
+  contextMenu.style.left = '0px';
+  contextMenu.style.top = '0px';
+
+  const rect = contextMenu.getBoundingClientRect();
+  const menuW = rect.width;
+  const menuH = rect.height;
+  const m = 8;
+
+  // Use actual screen bounds for flip direction; fall back to viewport
+  const bounds = await getDisplayBounds();
+  const limitR = bounds ? bounds.right  : window.innerWidth;
+  const limitB = bounds ? bounds.bottom : window.innerHeight;
+
+  let left = cx + 2;
+  let top  = cy + 2;
+  if (left + menuW > limitR - m) left = cx - menuW - 2;
+  if (top  + menuH > limitB - m) top  = cy - menuH - 2;
+
+  // Hard clamp to viewport (fixed elements cannot render outside the webview)
+  left = Math.round(Math.max(m, Math.min(window.innerWidth  - menuW - m, left)));
+  top  = Math.round(Math.max(m, Math.min(window.innerHeight - menuH - m, top)));
+
+  contextMenu.style.left = `${left}px`;
+  contextMenu.style.top  = `${top}px`;
+  setSurfaceOpenClass();
 }
 
 function openSettings(anchor = anchorFromElement(btnSettings)) {
