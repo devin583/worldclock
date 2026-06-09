@@ -1,0 +1,208 @@
+/* ───────────────────────────────────────────────────────────
+   flip-clock — a transparent-background mechanical flip clock.
+   Only the cards paint; everything else is transparent so it can
+   sit on a desktop like a pet/widget.
+
+   Per-variant look is driven entirely by CSS custom properties:
+     --w/--h  card size      --fs  digit size      --r  corner radius
+     --gap-d  gap between the two digits of a pair
+     --gap-g  gap between pairs (hh / mm / ss)
+     --card / --card-hi / --card-lo  card faces (mid / top sheen / bottom)
+     --digit  numeral color    --seam  hairline at the fold
+     --shadow drop shadow      --font  numeral typeface
+   ─────────────────────────────────────────────────────────── */
+
+.flip-clock {
+  --w: 80px; --h: 118px; --fs: 96px; --r: 10px;
+  --gap-d: 6px; --gap-g: 26px;
+  --card: #16171c; --card-hi: #25272e; --card-lo: #0e0f13;
+  --digit: #f6f5f1; --seam: rgba(0,0,0,.55);
+  --shadow: 0 10px 22px rgba(0,0,0,.30);
+  --font: "Archivo", system-ui, sans-serif;
+  --meta: rgba(255,255,255,.92);
+  --meta-size: 17px; --meta-weight: 600; --meta-spacing: .14em;
+
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* meta row (weekday / date / location) ─────────────────────── */
+.fc-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font);
+  font-size: var(--meta-size);
+  font-weight: var(--meta-weight);
+  letter-spacing: var(--meta-spacing);
+  color: var(--meta);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.fc-meta > span { white-space: nowrap; }
+.fc-meta .fc-dot { opacity: .45; font-weight: 400; }
+
+/* the row of digit pairs ───────────────────────────────────── */
+.fc-row { display: flex; align-items: center; gap: var(--gap-g); }
+.fc-pair { display: flex; align-items: center; gap: var(--gap-d); }
+
+/* one rolling digit ────────────────────────────────────────── */
+.fc-digit {
+  position: relative;
+  width: var(--w);
+  height: var(--h);
+  perspective: 720px;
+  filter: drop-shadow(var(--shadow));
+  font-family: var(--font);
+  font-weight: 700;
+}
+
+.fc-leaf {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.fc-top {
+  top: 0;
+  border-radius: var(--r) var(--r) 0 0;
+  transform-origin: 50% 100%;
+  background: linear-gradient(180deg, var(--card-hi), var(--card));
+  box-shadow: inset 0 -1px 0 var(--seam);
+}
+.fc-bottom {
+  bottom: 0;
+  border-radius: 0 0 var(--r) var(--r);
+  transform-origin: 50% 0%;
+  background: linear-gradient(180deg, var(--card), var(--card-lo));
+  box-shadow: inset 0 1px 0 var(--seam);
+}
+
+.fc-n {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: var(--h);
+  line-height: var(--h);
+  text-align: center;
+  font-size: var(--fs);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  color: var(--digit);
+}
+.fc-top .fc-n { top: 0; }
+.fc-bottom .fc-n { bottom: 0; }
+
+.fc-fold-top, .fc-fold-bottom { z-index: 3; }
+
+/* the moving shadow on each folding leaf */
+.fc-shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* AM/PM marker ─────────────────────────────────────────────── */
+.fc-ampm {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-self: stretch;
+  padding-bottom: 6px;
+  font-family: var(--font);
+  font-weight: 700;
+  letter-spacing: .08em;
+  font-size: calc(var(--fs) * .2);
+  color: var(--digit);
+  line-height: 1.05;
+}
+.fc-ampm b { opacity: .28; transition: opacity .3s; }
+.fc-ampm b.on { opacity: 1; }
+
+/* ════════════ VARIANT: classic — black split-flap ═══════════ */
+.fc-classic {
+  --w: 82px; --h: 122px; --fs: 100px; --r: 9px;
+  --gap-d: 7px; --gap-g: 30px;
+  --card: #17181d; --card-hi: #292b33; --card-lo: #0d0e12;
+  --digit: #f7f6f2; --seam: rgba(0,0,0,.6);
+  --shadow: 0 12px 26px rgba(0,0,0,.38);
+  --font: "Archivo", system-ui, sans-serif;
+  --meta: rgba(255,255,255,.78);
+  --meta-size: 16px; --meta-weight: 600; --meta-spacing: .12em;
+}
+
+/* ════════════ VARIANT: minimal — soft light cards ══════════ */
+.fc-minimal {
+  --w: 104px; --h: 144px; --fs: 116px; --r: 30px;
+  --gap-d: 12px; --gap-g: 22px;
+  --card: #f7f5f1; --card-hi: #ffffff; --card-lo: #ece9e3;
+  --digit: #232220; --seam: rgba(0,0,0,.06);
+  --shadow: 0 18px 40px rgba(40,34,28,.16);
+  --font: "Manrope", system-ui, sans-serif;
+  --meta: rgba(60,55,48,.62);
+  --meta-size: 16px; --meta-weight: 600; --meta-spacing: .14em;
+  gap: 26px;
+}
+.fc-minimal .fc-digit { font-weight: 500; }
+.fc-minimal .fc-n { font-weight: 500; }
+
+/* ════════════ VARIANT: cute — cream squircles ═════════════ */
+.fc-cute {
+  --w: 84px; --h: 112px; --fs: 84px; --r: 30px;
+  --gap-d: 9px; --gap-g: 18px;
+  --card: #ffeede; --card-hi: #fff7ee; --card-lo: #ffe0c6;
+  --digit: #6b4a32; --seam: rgba(150,96,55,.18);
+  --shadow: 0 12px 26px rgba(193,120,70,.28);
+  --font: "Fredoka", system-ui, sans-serif;
+  --meta: #8a5a3c;
+  --meta-size: 16px; --meta-weight: 500; --meta-spacing: .08em;
+  gap: 16px;
+}
+.fc-cute .fc-digit { font-weight: 600; }
+.fc-cute .fc-n { font-weight: 600; }
+.fc-cute .fc-ampm {
+  background: #ffd9b8;
+  color: #8a5a3c;
+  border-radius: 999px;
+  padding: 5px 11px;
+  align-self: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(193,120,70,.24);
+  font-size: 17px;
+  letter-spacing: .06em;
+}
+.fc-cute .fc-ampm b { display: none; }
+.fc-cute .fc-ampm b.on { display: block; opacity: 1; }
+
+/* ════════════ VARIANT: glass — translucent dark ═══════════ */
+.fc-glass {
+  --w: 76px; --h: 108px; --fs: 86px; --r: 20px;
+  --gap-d: 8px; --gap-g: 20px;
+  --card: rgba(28,28,34,.42); --card-hi: rgba(72,72,84,.46); --card-lo: rgba(14,14,18,.5);
+  --digit: #ffffff; --seam: rgba(0,0,0,.32);
+  --shadow: 0 14px 34px rgba(0,0,0,.36);
+  --font: "Manrope", system-ui, sans-serif;
+  --meta: rgba(255,255,255,.9);
+  --meta-size: 16px; --meta-weight: 600; --meta-spacing: .12em;
+}
+.fc-glass .fc-leaf {
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+}
+.fc-glass .fc-top { box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 var(--seam); }
+.fc-glass .fc-bottom { box-shadow: inset 0 1px 0 var(--seam); }
+.fc-glass .fc-digit { font-weight: 600; }
+.fc-glass .fc-n { font-weight: 600; text-shadow: 0 1px 10px rgba(0,0,0,.25); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fc-leaf { transition: none !important; }
+}

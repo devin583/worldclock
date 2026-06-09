@@ -1,13 +1,6 @@
 (() => {
-if (window.__worldClockMainBootstrapped) {
-  window.__worldClockMainStarted = true;
-  window.__worldClockMainLoaded = true;
-  return;
-}
-
+if (window.__worldClockMainBootstrapped) return;
 window.__worldClockMainBootstrapped = true;
-window.__worldClockMainStarted = true;
-window.__worldClockMainLoaded = false;
 
 const tauriApi = window.__TAURI__ ?? {};
 const tauriInvoke = tauriApi.core?.invoke;
@@ -17,18 +10,12 @@ const isWindows = /Windows/i.test(navigator.userAgent);
 
 const invoke = isTauri
   ? async (cmd, args) => {
-      try {
-        return await tauriInvoke(cmd, args);
-      } catch (error) {
-        console.warn('[invoke failed]', cmd, error);
-        return null;
-      }
+      try { return await tauriInvoke(cmd, args); }
+      catch (e) { console.warn('[invoke]', cmd, e); return null; }
     }
   : async (cmd, args) => { console.log('[invoke noop]', cmd, args); return null; };
 
-const listen = typeof tauriListen === 'function'
-  ? tauriListen
-  : async () => () => {};
+const listen = typeof tauriListen === 'function' ? tauriListen : async () => () => {};
 
 const TIMEZONES = [
   'Europe/Budapest','Europe/London','Europe/Paris','Europe/Berlin','Europe/Rome',
@@ -42,18 +29,23 @@ const TIMEZONES = [
   'Atlantic/Reykjavik','UTC',
 ];
 
-const THEME_VALUES = ['minimal-glass', 'mechanical', 'soft-companion', 'flip', 'boundless'];
-const THEME_CLASSES = THEME_VALUES.map(theme => `theme-${theme}`);
-const SURFACE_STYLE_VALUES = ['transparent', 'solid'];
-const SURFACE_STYLE_CLASSES = SURFACE_STYLE_VALUES.map(style => `surface-${style}`);
+const THEME_VALUES = ['classic', 'minimal', 'cute', 'glass'];
+const THEME_CLASSES = THEME_VALUES.map(t => `theme-${t}`);
 const LEGACY_THEME_MAP = {
-  dark: 'minimal-glass',
-  light: 'minimal-glass',
-  classic: 'minimal-glass',
-  'glass-pet': 'minimal-glass',
-  'moon-cat': 'soft-companion',
-  'pixel-buddy': 'mechanical',
+  'minimal-glass': 'glass',
+  'mechanical': 'classic',
+  'soft-companion': 'cute',
+  'flip': 'classic',
+  'boundless': 'minimal',
+  'dark': 'classic',
+  'light': 'minimal',
+  'classic': 'classic',
+  'glass-pet': 'glass',
+  'moon-cat': 'cute',
+  'pixel-buddy': 'classic',
 };
+const SURFACE_STYLE_VALUES = ['transparent', 'solid'];
+const SURFACE_STYLE_CLASSES = SURFACE_STYLE_VALUES.map(s => `surface-${s}`);
 const MODE_VALUES = ['digital', 'analog', 'both'];
 const TIME_FORMAT_VALUES = ['24', '12'];
 
@@ -66,26 +58,21 @@ const DEFAULT_CONFIG = {
   mode: 'digital',
   locked: false,
   on_top: true,
-  theme: 'minimal-glass',
+  theme: 'classic',
   surfaceStyle: 'transparent',
   timeFormat: '24',
   opacity: 0.88,
   autostart: false,
-  pomodoro: {
-    focusMinutes: 25,
-    breakMinutes: 5,
-  },
+  pomodoro: { focusMinutes: 25, breakMinutes: 5 },
 };
 
 let config = normalizeConfig();
-let tickTimerId = null;
-let lastRenderedSecond = '';
 let hitRegionFrame = 0;
 
 const body = document.body;
-const stage = document.getElementById('stage');
 const clockBody = document.getElementById('clock-body');
 const objectShell = document.getElementById('object-shell');
+const mainEl = document.getElementById('main');
 const hoverControls = document.getElementById('hover-controls');
 const contextMenu = document.getElementById('context-menu');
 const settingsPanel = document.getElementById('settings-panel');
@@ -97,332 +84,203 @@ const btnSettings = document.getElementById('btn-settings');
 const btnHide = document.getElementById('btn-hide');
 const btnCloseSettings = document.getElementById('btn-close-settings');
 const modeBtns = document.querySelectorAll('.mode-btn');
-const cards = [document.getElementById('card-1'), document.getElementById('card-2')];
-const menuOpacity = document.getElementById('menu-opacity');
 const setOpacity = document.getElementById('set-opacity');
 
-const pomodoroState = {
-  phase: 'idle',
-  running: false,
-  durationMs: 0,
-  remainingMs: 0,
-  endAt: 0,
-};
+const pomodoroState = { phase: 'idle', running: false, durationMs: 0, remainingMs: 0, endAt: 0 };
 
 body.classList.toggle('platform-windows', isWindows);
 
-function clampNumber(value, min, max, fallback) {
-  const number = Number(value);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, number));
+// ── normalise ─────────────────────────────────────────────────────────────
+
+function clampNumber(v, min, max, fb) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fb;
 }
 
-function normalizeTheme(theme) {
-  const next = LEGACY_THEME_MAP[theme] || theme;
+function normalizeTheme(t) {
+  const next = LEGACY_THEME_MAP[t] || t;
   return THEME_VALUES.includes(next) ? next : DEFAULT_CONFIG.theme;
 }
-
-function normalizeMode(mode) {
-  return MODE_VALUES.includes(mode) ? mode : DEFAULT_CONFIG.mode;
-}
-
-function normalizeSurfaceStyle(style) {
-  return SURFACE_STYLE_VALUES.includes(style) ? style : DEFAULT_CONFIG.surfaceStyle;
-}
-
-function normalizeTimeFormat(value) {
-  return TIME_FORMAT_VALUES.includes(String(value)) ? String(value) : DEFAULT_CONFIG.timeFormat;
-}
-
-function normalizeClock(clock, fallback) {
+function normalizeMode(m) { return MODE_VALUES.includes(m) ? m : DEFAULT_CONFIG.mode; }
+function normalizeSurfaceStyle(s) { return SURFACE_STYLE_VALUES.includes(s) ? s : DEFAULT_CONFIG.surfaceStyle; }
+function normalizeTimeFormat(v) { return TIME_FORMAT_VALUES.includes(String(v)) ? String(v) : DEFAULT_CONFIG.timeFormat; }
+function normalizeClockCount(v) { return Number(v) === 1 ? 1 : 2; }
+function normalizeClock(c, fb) {
   return {
-    label: typeof clock?.label === 'string' && clock.label.trim()
-      ? clock.label.trim()
-      : fallback.label,
-    tz: TIMEZONES.includes(clock?.tz) ? clock.tz : fallback.tz,
+    label: typeof c?.label === 'string' && c.label.trim() ? c.label.trim() : fb.label,
+    tz: TIMEZONES.includes(c?.tz) ? c.tz : fb.tz,
   };
 }
-
-function normalizeClockCount(value) {
-  return Number(value) === 1 ? 1 : 2;
-}
-
-function normalizePomodoro(value = {}) {
+function normalizePomodoro(v = {}) {
   return {
-    focusMinutes: clampNumber(value.focusMinutes, 1, 120, DEFAULT_CONFIG.pomodoro.focusMinutes),
-    breakMinutes: clampNumber(value.breakMinutes, 1, 60, DEFAULT_CONFIG.pomodoro.breakMinutes),
+    focusMinutes: clampNumber(v.focusMinutes, 1, 120, DEFAULT_CONFIG.pomodoro.focusMinutes),
+    breakMinutes: clampNumber(v.breakMinutes, 1, 60, DEFAULT_CONFIG.pomodoro.breakMinutes),
   };
 }
-
 function normalizeConfig(saved = {}) {
-  const source = saved && typeof saved === 'object' ? saved : {};
-  const savedClocks = Array.isArray(source.clocks) ? source.clocks : [];
-  const clocks = [
-    normalizeClock(savedClocks[0], DEFAULT_CONFIG.clocks[0]),
-    normalizeClock(savedClocks[1], DEFAULT_CONFIG.clocks[1]),
-  ];
-
+  const src = saved && typeof saved === 'object' ? saved : {};
+  const savedClocks = Array.isArray(src.clocks) ? src.clocks : [];
   return {
-    ...DEFAULT_CONFIG,
-    ...source,
-    clocks,
-    clockCount: normalizeClockCount(source.clockCount ?? DEFAULT_CONFIG.clockCount),
-    mode: normalizeMode(source.mode),
-    theme: normalizeTheme(source.theme),
-    surfaceStyle: normalizeSurfaceStyle(source.surfaceStyle),
-    timeFormat: normalizeTimeFormat(source.timeFormat),
-    opacity: clampNumber(source.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
-    locked: Boolean(source.locked),
-    on_top: source.on_top !== false,
-    autostart: Boolean(source.autostart),
-    pomodoro: normalizePomodoro(source.pomodoro),
+    ...DEFAULT_CONFIG, ...src,
+    clocks: [
+      normalizeClock(savedClocks[0], DEFAULT_CONFIG.clocks[0]),
+      normalizeClock(savedClocks[1], DEFAULT_CONFIG.clocks[1]),
+    ],
+    clockCount: normalizeClockCount(src.clockCount ?? DEFAULT_CONFIG.clockCount),
+    mode: normalizeMode(src.mode),
+    theme: normalizeTheme(src.theme),
+    surfaceStyle: normalizeSurfaceStyle(src.surfaceStyle),
+    timeFormat: normalizeTimeFormat(src.timeFormat),
+    opacity: clampNumber(src.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
+    locked: Boolean(src.locked),
+    on_top: src.on_top !== false,
+    autostart: Boolean(src.autostart),
+    pomodoro: normalizePomodoro(src.pomodoro),
   };
 }
+function activeClockCount() { return normalizeClockCount(config.clockCount); }
 
-function activeClockCount() {
-  return normalizeClockCount(config.clockCount);
-}
+// ── clock component builder ───────────────────────────────────────────────
 
-function populateTimezoneOptions() {
-  const datalist = document.getElementById('timezone-options');
-  if (!datalist) return;
-  datalist.innerHTML = '';
-  TIMEZONES.forEach(tz => {
-    const opt = document.createElement('option');
-    opt.value = tz;
-    datalist.appendChild(opt);
-  });
-}
+function buildClocks() {
+  mainEl.innerHTML = '';
 
-function resolveTimezone(value, fallback) {
-  const query = value.trim().toLowerCase();
-  if (!query) return fallback;
-  return TIMEZONES.find(tz => tz.toLowerCase() === query)
-    || TIMEZONES.find(tz => tz.toLowerCase().includes(query))
-    || fallback;
-}
-
-function drawTicks(svgGroupId) {
-  const g = document.getElementById(svgGroupId);
-  if (!g) return;
-  g.innerHTML = '';
-  for (let i = 0; i < 60; i++) {
-    const angle = (i / 60) * 360;
-    const isHour = i % 5 === 0;
-    const r1 = isHour ? 78 : 88;
-    const r2 = 93;
-    const rad = (angle - 90) * Math.PI / 180;
-    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    line.classList.add(isHour ? 'tick-hour' : 'tick-minute');
-    line.setAttribute('x1', 100 + r1 * Math.cos(rad));
-    line.setAttribute('y1', 100 + r1 * Math.sin(rad));
-    line.setAttribute('x2', 100 + r2 * Math.cos(rad));
-    line.setAttribute('y2', 100 + r2 * Math.sin(rad));
-    line.setAttribute('stroke', isHour ? 'var(--tick-hour)' : 'var(--tick-minute)');
-    line.setAttribute('stroke-width', isHour ? 3 : 1.3);
-    line.setAttribute('stroke-linecap', 'round');
-    g.appendChild(line);
-  }
-}
-
-function setHand(id, angleDeg) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.style.transform = `rotate(${angleDeg}deg)`;
-  el.setAttribute('transform', `rotate(${angleDeg} 100 100)`);
-}
-
-function renderDigitalTime(index, value) {
-  const el = document.getElementById(`digital-${index}`);
-  if (!el) return;
-
-  const groups = value.split(':').map(group => group.padStart(2, '0').slice(-2));
-  const chars = groups.join('').split('');
-  const previous = el.dataset.lastValue || '';
-  const digits = [...el.querySelectorAll('.flip-char')];
-  const canPatch = previous.length === value.length && digits.length === chars.length;
-
-  if (!canPatch) {
-    el.innerHTML = groups.map(group => (
-      `<span class="time-group">${[...group].map(char => `<span class="flip-char">${char}</span>`).join('')}</span>`
-    )).join('');
-  } else {
-    chars.forEach((char, charIndex) => {
-      const child = digits[charIndex];
-      if (!child) return;
-      child.className = 'flip-char';
-      if (child.textContent !== char) {
-        child.textContent = char;
-        child.classList.remove('is-changing');
-        void child.offsetWidth;
-        child.classList.add('is-changing');
-      }
-    });
-  }
-
-  if (value !== el.dataset.lastValue) {
-    el.dataset.lastValue = value;
-  }
-}
-
-function offsetText(tz1, tz2) {
-  const now = new Date();
-  const offset = (d, tz) => {
-    try {
-      const s = new Intl.DateTimeFormat('en', {
-        timeZone: tz, hour: 'numeric', hour12: false, timeZoneName: 'shortOffset'
-      }).formatToParts(d);
-      const tzPart = s.find(p => p.type === 'timeZoneName')?.value ?? 'UTC+0';
-      const m = tzPart.match(/([+-])(\d+)(?::(\d+))?/);
-      if (!m) return 0;
-      return (parseInt(m[2], 10) + (parseInt(m[3] ?? 0, 10) / 60)) * (m[1] === '+' ? 1 : -1);
-    } catch (error) {
-      console.warn('offset fallback', tz, error);
-      return 0;
-    }
-  };
-  const diff = offset(now, tz2) - offset(now, tz1);
-  const sign = diff >= 0 ? '+' : '';
-  return `${sign}${diff}h · 对比 ${config.clocks[0].label}`;
-}
-
-function clearClock(index) {
-  const digital = document.getElementById(`digital-${index}`);
-  const date = document.getElementById(`date-${index}`);
-  const offset = document.getElementById(`offset-${index}`);
-  if (digital) digital.textContent = '';
-  if (date) date.textContent = '';
-  if (offset) offset.textContent = '';
-}
-
-function tickClocks(now) {
   const count = activeClockCount();
+  const mode = config.mode;
+  const variant = config.theme; // classic | minimal | cute | glass
+  const lang = 'zh';
+  const hour12 = config.timeFormat === '12';
 
-  for (let i = 0; i < 2; i++) {
-    const idx = i + 1;
-    if (i >= count) {
-      clearClock(idx);
-      continue;
-    }
-
-    const cl = config.clocks[i];
-    const formatterLocale = config.timeFormat === '12' ? 'en-US' : 'en-GB';
-    const timeParts = new Intl.DateTimeFormat(formatterLocale, {
-      timeZone: cl.tz,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: config.timeFormat === '12',
-    }).formatToParts(now);
-
-    const get = type => timeParts.find(p => p.type === type)?.value ?? '00';
-    const hh = get('hour');
-    const mm = get('minute');
-    const ss = get('second');
-    const period = timeParts.find(p => p.type === 'dayPeriod')?.value ?? '';
-
-    renderDigitalTime(idx, `${hh}:${mm}:${ss}`);
-
-    const dateStr = new Intl.DateTimeFormat('en-GB', {
-      timeZone: cl.tz,
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
-    }).format(now);
-    document.getElementById(`date-${idx}`).textContent = period ? `${dateStr} · ${period}` : dateStr;
-
-    const h = parseInt(hh, 10) % 12;
-    const m = parseInt(mm, 10);
-    const s = parseInt(ss, 10);
-    setHand(`hour-${idx}`, (h + m / 60) * 30);
-    setHand(`minute-${idx}`, (m + s / 60) * 6);
-    setHand(`second-${idx}`, s * 6);
+  if (count === 1) {
+    buildSingleClock(mode, variant, lang, hour12, config.clocks[0]);
+  } else {
+    buildDualClock(mode, variant, lang, hour12, config.clocks[0], config.clocks[1]);
   }
 
-  document.getElementById('offset-1').textContent = '';
-  document.getElementById('offset-2').textContent =
-    count >= 2 ? offsetText(config.clocks[0].tz, config.clocks[1].tz) : '';
+  scheduleHitRegionUpdate();
 }
+
+function buildSingleClock(mode, variant, lang, hour12, clock) {
+  if (mode === 'analog') {
+    const wrap = document.createElement('div');
+    wrap.className = 'single-wrap';
+
+    const a = document.createElement('analog-clock');
+    a.setAttribute('variant', 'dark');
+    a.setAttribute('seconds', '');
+    if (clock.tz) a.setAttribute('tz', clock.tz);
+    a.style.cssText = '--size:180px';
+    wrap.appendChild(a);
+
+    const zm = document.createElement('zone-meta');
+    zm.setAttribute('variant', 'dark');
+    zm.setAttribute('tz', clock.tz);
+    zm.setAttribute('label', clock.label);
+    zm.setAttribute('lang', lang);
+    zm.setAttribute('center', '');
+    wrap.appendChild(zm);
+
+    mainEl.appendChild(wrap);
+  } else if (mode === 'both') {
+    const d = document.createElement('dual-clock');
+    d.setAttribute('variant', 'dark');
+    if (clock.tz) d.setAttribute('tz', clock.tz);
+    d.setAttribute('meta', 'weekday,date,location');
+    d.setAttribute('location', clock.label);
+    d.setAttribute('lang', lang);
+    if (hour12) d.setAttribute('hour12', '');
+    mainEl.appendChild(d);
+  } else {
+    // digital
+    const f = document.createElement('flip-clock');
+    f.setAttribute('variant', variant);
+    f.setAttribute('fields', 'hms');
+    if (clock.tz) f.setAttribute('tz', clock.tz);
+    f.setAttribute('meta', 'weekday,date,location');
+    f.setAttribute('location', clock.label);
+    f.setAttribute('lang', lang);
+    if (hour12) f.setAttribute('hour12', '');
+    if (hour12) f.setAttribute('ampm', '');
+    mainEl.appendChild(f);
+  }
+}
+
+function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
+  if (mode === 'both') {
+    const wrap = document.createElement('div');
+    wrap.className = 'dual-both-wrap';
+    [clockA, clockB].forEach(clock => {
+      const d = document.createElement('dual-clock');
+      d.setAttribute('variant', 'dark');
+      if (clock.tz) d.setAttribute('tz', clock.tz);
+      d.setAttribute('meta', 'weekday,date,location');
+      d.setAttribute('location', clock.label);
+      d.setAttribute('lang', lang);
+      if (hour12) d.setAttribute('hour12', '');
+      wrap.appendChild(d);
+    });
+    mainEl.appendChild(wrap);
+  } else {
+    const wp = document.createElement('world-pair');
+    wp.setAttribute('type', mode === 'analog' ? 'analog' : 'digital');
+    wp.setAttribute('layout', 'row');
+    wp.setAttribute('variant', 'dark');
+    wp.setAttribute('lang', lang);
+    wp.setAttribute('a-tz', clockA.tz);
+    wp.setAttribute('a-label', clockA.label);
+    wp.setAttribute('b-tz', clockB.tz);
+    wp.setAttribute('b-label', clockB.label);
+    mainEl.appendChild(wp);
+  }
+}
+
+// ── pomodoro ──────────────────────────────────────────────────────────────
+
+let tickTimerId = null;
 
 function pomodoroDuration(phase) {
-  const minutes = phase === 'break'
-    ? config.pomodoro.breakMinutes
-    : config.pomodoro.focusMinutes;
-  return minutes * 60 * 1000;
+  return (phase === 'break' ? config.pomodoro.breakMinutes : config.pomodoro.focusMinutes) * 60000;
 }
-
 function formatDuration(ms) {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  const t = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 }
-
 function setPomodoroStatus(text) {
-  if (!text) {
-    pomodoroStatus.classList.add('hidden');
-    pomodoroStatus.textContent = '';
-    return;
-  }
+  if (!text) { pomodoroStatus.classList.add('hidden'); pomodoroStatus.textContent = ''; return; }
   pomodoroStatus.textContent = text;
   pomodoroStatus.classList.remove('hidden');
 }
-
 function startPomodoro(phase = 'focus') {
   const durationMs = pomodoroDuration(phase);
-  pomodoroState.phase = phase;
-  pomodoroState.running = true;
-  pomodoroState.durationMs = durationMs;
-  pomodoroState.remainingMs = durationMs;
-  pomodoroState.endAt = Date.now() + durationMs;
+  Object.assign(pomodoroState, { phase, running: true, durationMs, remainingMs: durationMs, endAt: Date.now() + durationMs });
   body.classList.remove('pomodoro-done');
   updatePomodoro();
 }
-
 function pausePomodoro() {
   if (!pomodoroState.running) return;
   pomodoroState.remainingMs = Math.max(0, pomodoroState.endAt - Date.now());
-  pomodoroState.running = false;
-  pomodoroState.endAt = 0;
+  pomodoroState.running = false; pomodoroState.endAt = 0;
   updatePomodoro();
 }
-
 function resumePomodoro() {
-  if (pomodoroState.phase === 'idle' || pomodoroState.remainingMs <= 0) {
-    startPomodoro('focus');
-    return;
-  }
+  if (pomodoroState.phase === 'idle' || pomodoroState.remainingMs <= 0) { startPomodoro('focus'); return; }
   pomodoroState.running = true;
   pomodoroState.endAt = Date.now() + pomodoroState.remainingMs;
   updatePomodoro();
 }
-
 function resetPomodoro() {
-  pomodoroState.phase = 'idle';
-  pomodoroState.running = false;
-  pomodoroState.durationMs = 0;
-  pomodoroState.remainingMs = 0;
-  pomodoroState.endAt = 0;
+  Object.assign(pomodoroState, { phase: 'idle', running: false, durationMs: 0, remainingMs: 0, endAt: 0 });
   body.classList.remove('pomodoro-active', 'pomodoro-paused', 'pomodoro-done');
   body.style.setProperty('--progress', '0deg');
-  setPomodoroStatus('');
-  syncMenuLabels();
+  setPomodoroStatus(''); syncMenuLabels();
 }
-
 function togglePomodoro() {
-  if (pomodoroState.running) {
-    pausePomodoro();
-  } else {
-    resumePomodoro();
-  }
+  if (pomodoroState.running) pausePomodoro(); else resumePomodoro();
   syncMenuLabels();
 }
-
 function completePomodoro() {
   const wasFocus = pomodoroState.phase === 'focus';
-  pomodoroState.running = false;
-  pomodoroState.remainingMs = 0;
-  pomodoroState.endAt = 0;
+  Object.assign(pomodoroState, { running: false, remainingMs: 0, endAt: 0 });
   body.classList.remove('pomodoro-active', 'pomodoro-paused');
   body.classList.add('pomodoro-done');
   body.style.setProperty('--progress', '360deg');
@@ -430,88 +288,55 @@ function completePomodoro() {
   window.setTimeout(() => body.classList.remove('pomodoro-done'), 1200);
   syncMenuLabels();
 }
-
 function updatePomodoro() {
   if (pomodoroState.phase === 'idle') return;
-
   if (pomodoroState.running) {
     pomodoroState.remainingMs = Math.max(0, pomodoroState.endAt - Date.now());
-    if (pomodoroState.remainingMs <= 0) {
-      completePomodoro();
-      return;
-    }
+    if (pomodoroState.remainingMs <= 0) { completePomodoro(); return; }
   }
-
   const elapsed = pomodoroState.durationMs - pomodoroState.remainingMs;
   const progress = pomodoroState.durationMs > 0 ? (elapsed / pomodoroState.durationMs) * 360 : 0;
-  const phaseText = pomodoroState.phase === 'break' ? '休息' : '专注';
   body.classList.toggle('pomodoro-active', pomodoroState.running);
   body.classList.toggle('pomodoro-paused', !pomodoroState.running);
   body.style.setProperty('--progress', `${Math.max(0, Math.min(360, progress))}deg`);
-  setPomodoroStatus(`${phaseText} ${formatDuration(pomodoroState.remainingMs)}${pomodoroState.running ? '' : ' 暂停'}`);
+  setPomodoroStatus(`${pomodoroState.phase === 'break' ? '休息' : '专注'} ${formatDuration(pomodoroState.remainingMs)}${pomodoroState.running ? '' : ' 暂停'}`);
 }
 
 function tick() {
-  if (document.hidden) return;
-  const now = new Date();
-  const secondKey = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
-  tickClocks(now);
-  updatePomodoro();
-  if (secondKey !== lastRenderedSecond) {
-    lastRenderedSecond = secondKey;
-    scheduleHitRegionUpdate();
-  }
+  if (!document.hidden) updatePomodoro();
 }
-
 function startClock() {
   if (tickTimerId !== null) return;
-  tick();
   tickTimerId = window.setInterval(tick, 1000);
 }
-
 function stopClock() {
   if (tickTimerId === null) return;
-  window.clearInterval(tickTimerId);
-  tickTimerId = null;
+  window.clearInterval(tickTimerId); tickTimerId = null;
 }
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopClock(); else startClock(); });
 
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) stopClock();
-  else startClock();
-});
+// ── apply functions ───────────────────────────────────────────────────────
 
 function applyMode(mode) {
   config.mode = normalizeMode(mode);
-  cards.forEach(card => {
-    card.className = 'clock-card';
-    card.classList.add(`mode-${config.mode}`);
-  });
-  modeBtns.forEach(button => {
-    button.classList.toggle('active', button.dataset.mode === config.mode);
-  });
-  tick();
-  scheduleHitRegionUpdate();
+  modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === config.mode));
+  buildClocks();
 }
 
 function applyTheme(theme) {
   config.theme = normalizeTheme(theme);
-  body.classList.remove(...THEME_CLASSES, 'theme-dark', 'theme-light', 'theme-classic', 'theme-glass-pet', 'theme-moon-cat', 'theme-pixel-buddy');
+  body.classList.remove(...THEME_CLASSES);
   body.classList.add(`theme-${config.theme}`);
-  document.querySelectorAll('input[name="theme"]').forEach(input => {
-    input.checked = input.value === config.theme;
-  });
+  document.querySelectorAll('input[name="theme"]').forEach(i => { i.checked = i.value === config.theme; });
   if (isTauri) invoke('set_theme', { theme: config.theme });
-  tick();
-  scheduleHitRegionUpdate();
+  buildClocks();
 }
 
 function applySurfaceStyle(style) {
   config.surfaceStyle = normalizeSurfaceStyle(style);
   body.classList.remove(...SURFACE_STYLE_CLASSES);
   body.classList.add(`surface-${config.surfaceStyle}`);
-  document.querySelectorAll('input[name="surface-style"]').forEach(input => {
-    input.checked = input.value === config.surfaceStyle;
-  });
+  document.querySelectorAll('input[name="surface-style"]').forEach(i => { i.checked = i.value === config.surfaceStyle; });
   scheduleHitRegionUpdate();
 }
 
@@ -519,30 +344,23 @@ function applyClockCount(count) {
   config.clockCount = normalizeClockCount(count);
   body.classList.toggle('clock-count-1', config.clockCount === 1);
   body.classList.toggle('clock-count-2', config.clockCount === 2);
-  cards[1]?.setAttribute('aria-hidden', config.clockCount === 1 ? 'true' : 'false');
-  document.querySelectorAll('input[name="clock-count"]').forEach(input => {
-    input.checked = Number(input.value) === config.clockCount;
-  });
+  document.querySelectorAll('input[name="clock-count"]').forEach(i => { i.checked = Number(i.value) === config.clockCount; });
   syncSettingsClockCountVisibility();
-  tick();
-  scheduleHitRegionUpdate();
+  buildClocks();
 }
 
 function applyOpacity(value) {
   config.opacity = clampNumber(value, 0.72, 1, DEFAULT_CONFIG.opacity);
   body.style.setProperty('--clock-opacity', String(config.opacity));
-  menuOpacity.value = String(config.opacity);
   setOpacity.value = String(config.opacity);
   scheduleHitRegionUpdate();
 }
 
 function applyTimeFormat(value) {
   config.timeFormat = normalizeTimeFormat(value);
-  document.querySelectorAll('input[name="time-format"]').forEach(input => {
-    input.checked = input.value === config.timeFormat;
-  });
+  document.querySelectorAll('input[name="time-format"]').forEach(i => { i.checked = i.value === config.timeFormat; });
   syncMenuLabels();
-  tick();
+  buildClocks();
 }
 
 function applyOnTop(enabled) {
@@ -563,124 +381,109 @@ function applyLock(locked) {
   syncMenuLabels();
 }
 
+// ── settings ──────────────────────────────────────────────────────────────
+
 async function saveConfig() {
   if (!isTauri) return;
-  try {
-    await invoke('save_config', { data: config });
-  } catch (error) {
-    console.error('saveConfig', error);
-  }
+  try { await invoke('save_config', { data: config }); }
+  catch (e) { console.error('saveConfig', e); }
 }
 
 async function loadConfig() {
   if (!isTauri) return;
-  try {
-    const saved = await invoke('load_config');
-    config = normalizeConfig(saved);
-  } catch (error) {
-    console.error('loadConfig', error);
-  }
+  try { config = normalizeConfig(await invoke('load_config')); }
+  catch (e) { console.error('loadConfig', e); }
+}
+
+function populateTimezoneOptions() {
+  const dl = document.getElementById('timezone-options');
+  if (!dl) return;
+  dl.innerHTML = '';
+  TIMEZONES.forEach(tz => { const o = document.createElement('option'); o.value = tz; dl.appendChild(o); });
+}
+
+function resolveTimezone(value, fallback) {
+  const q = value.trim().toLowerCase();
+  if (!q) return fallback;
+  return TIMEZONES.find(tz => tz.toLowerCase() === q)
+    || TIMEZONES.find(tz => tz.toLowerCase().includes(q))
+    || fallback;
 }
 
 function syncSettingsClockCountVisibility() {
-  const selected = document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount;
-  settingsPanel.classList.toggle('clock-count-1', Number(selected) === 1);
+  const sel = document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount;
+  settingsPanel.classList.toggle('clock-count-1', Number(sel) === 1);
 }
 
 function syncMenuLabels() {
-  document.getElementById('menu-pomodoro').textContent = pomodoroState.running
-    ? '暂停番茄钟'
-    : (pomodoroState.phase === 'idle' ? '开始番茄钟' : '继续番茄钟');
+  document.getElementById('menu-pomodoro').textContent =
+    pomodoroState.running ? '暂停番茄钟' : (pomodoroState.phase === 'idle' ? '开始番茄钟' : '继续番茄钟');
   document.getElementById('menu-format').textContent = config.timeFormat === '24' ? '切换 12h' : '切换 24h';
   document.getElementById('menu-lock').textContent = config.locked ? '解锁位置' : '锁定位置';
   document.getElementById('menu-ontop').textContent = config.on_top ? '取消置顶' : '始终置顶';
   btnPomodoro.classList.toggle('active', pomodoroState.running);
 }
 
+// ── floating surfaces ─────────────────────────────────────────────────────
+
 function isSurfaceOpen() {
   return !contextMenu.classList.contains('hidden') || !settingsPanel.classList.contains('hidden');
 }
-
 function setSurfaceOpenClass() {
   body.classList.toggle('surface-open', isSurfaceOpen());
   scheduleHitRegionUpdate();
 }
+function positionSurface(el, x, y, offset = 10) {
+  el.classList.remove('hidden');
+  el.style.left = '0px'; el.style.top = '0px';
 
-function positionSurface(element, x, y, offset = 10) {
-  element.classList.remove('hidden');
-  element.style.left = '0px';
-  element.style.top = '0px';
+  // After unhiding, rect reflects the clamped max-height
+  const rect = el.getBoundingClientRect();
+  const m = 8;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
-  const rect = element.getBoundingClientRect();
-  const margin = 8;
+  // Try right/below first; flip left/above if it overflows
   let left = x + offset;
-  let top = y + offset;
+  let top  = y + offset;
+  if (left + rect.width  > vw - m) left = x - rect.width  - offset;
+  if (top  + rect.height > vh - m) top  = y - rect.height - offset;
 
-  if (left + rect.width > window.innerWidth - margin) left = x - rect.width - offset;
-  if (top + rect.height > window.innerHeight - margin) top = y - rect.height - offset;
+  // Hard clamp so it never goes off-screen even if there's no room to flip
+  left = Math.round(Math.max(m, Math.min(vw - rect.width  - m, left)));
+  top  = Math.round(Math.max(m, Math.min(vh - rect.height - m, top)));
 
-  left = Math.max(margin, Math.min(window.innerWidth - rect.width - margin, left));
-  top = Math.max(margin, Math.min(window.innerHeight - rect.height - margin, top));
-
-  element.style.left = `${Math.round(left)}px`;
-  element.style.top = `${Math.round(top)}px`;
+  el.style.left = `${left}px`;
+  el.style.top  = `${top}px`;
   setSurfaceOpenClass();
 }
-
-function closeContextMenu() {
-  contextMenu.classList.add('hidden');
-  setSurfaceOpenClass();
-}
-
-function closeSettings() {
-  settingsPanel.classList.add('hidden');
-  setSurfaceOpenClass();
-}
-
-function closeFloatingSurfaces() {
-  closeContextMenu();
-  closeSettings();
-}
-
-function anchorFromElement(element) {
-  const rect = element.getBoundingClientRect();
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.bottom,
-  };
+function closeContextMenu() { contextMenu.classList.add('hidden'); setSurfaceOpenClass(); }
+function closeSettings() { settingsPanel.classList.add('hidden'); setSurfaceOpenClass(); }
+function closeFloatingSurfaces() { closeContextMenu(); closeSettings(); }
+function anchorFromElement(el) {
+  const r = el.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.bottom };
 }
 
 function openContextMenu(event) {
   event.preventDefault();
-  closeSettings();
-  syncMenuLabels();
+  closeSettings(); syncMenuLabels();
   positionSurface(contextMenu, event.clientX, event.clientY, 2);
 }
 
 function openSettings(anchor = anchorFromElement(btnSettings)) {
   closeContextMenu();
   populateTimezoneOptions();
-
   document.getElementById('set-label-1').value = config.clocks[0].label;
   document.getElementById('set-label-2').value = config.clocks[1].label;
   document.getElementById('set-tz-1').value = config.clocks[0].tz;
   document.getElementById('set-tz-2').value = config.clocks[1].tz;
   document.getElementById('set-focus-minutes').value = String(config.pomodoro.focusMinutes);
   document.getElementById('set-break-minutes').value = String(config.pomodoro.breakMinutes);
-
-  document.querySelectorAll('input[name="clock-count"]').forEach(input => {
-    input.checked = Number(input.value) === config.clockCount;
-  });
-  document.querySelectorAll('input[name="theme"]').forEach(input => {
-    input.checked = input.value === config.theme;
-  });
-  document.querySelectorAll('input[name="surface-style"]').forEach(input => {
-    input.checked = input.value === config.surfaceStyle;
-  });
-  document.querySelectorAll('input[name="time-format"]').forEach(input => {
-    input.checked = input.value === config.timeFormat;
-  });
-
+  document.querySelectorAll('input[name="clock-count"]').forEach(i => { i.checked = Number(i.value) === config.clockCount; });
+  document.querySelectorAll('input[name="theme"]').forEach(i => { i.checked = i.value === config.theme; });
+  document.querySelectorAll('input[name="surface-style"]').forEach(i => { i.checked = i.value === config.surfaceStyle; });
+  document.querySelectorAll('input[name="time-format"]').forEach(i => { i.checked = i.value === config.timeFormat; });
   document.getElementById('set-ontop').checked = config.on_top;
   document.getElementById('set-autostart').checked = config.autostart;
   applyOpacity(config.opacity);
@@ -690,18 +493,10 @@ function openSettings(anchor = anchorFromElement(btnSettings)) {
 
 async function applySettings() {
   applyClockCount(document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount);
-
   config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Clock 1';
-  config.clocks[0].tz = resolveTimezone(
-    document.getElementById('set-tz-1').value,
-    config.clocks[0].tz
-  );
+  config.clocks[0].tz = resolveTimezone(document.getElementById('set-tz-1').value, config.clocks[0].tz);
   config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Clock 2';
-  config.clocks[1].tz = resolveTimezone(
-    document.getElementById('set-tz-2').value,
-    config.clocks[1].tz
-  );
-
+  config.clocks[1].tz = resolveTimezone(document.getElementById('set-tz-2').value, config.clocks[1].tz);
   applyTheme(document.querySelector('input[name="theme"]:checked')?.value ?? config.theme);
   applySurfaceStyle(document.querySelector('input[name="surface-style"]:checked')?.value ?? config.surfaceStyle);
   applyTimeFormat(document.querySelector('input[name="time-format"]:checked')?.value ?? config.timeFormat);
@@ -712,33 +507,22 @@ async function applySettings() {
     focusMinutes: document.getElementById('set-focus-minutes').value,
     breakMinutes: document.getElementById('set-break-minutes').value,
   });
-
-  document.getElementById('label-1').textContent = config.clocks[0].label;
-  document.getElementById('label-2').textContent = config.clocks[1].label;
-
-  if (isTauri) {
-    invoke('set_autostart', { enabled: config.autostart });
-  }
-
-  tick();
+  if (isTauri) invoke('set_autostart', { enabled: config.autostart });
+  buildClocks();
   await saveConfig();
   closeSettings();
 }
 
+// ── interaction ───────────────────────────────────────────────────────────
+
 function isInteractiveTarget(target) {
   return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls, #mode-bar'));
 }
-
-function showInteractionSurfaces() {
-  body.classList.add('is-hovering');
-  scheduleHitRegionUpdate();
-}
-
+function showInteractionSurfaces() { body.classList.add('is-hovering'); scheduleHitRegionUpdate(); }
 function hideInteractionSurfacesSoon() {
   window.setTimeout(() => {
     if (isSurfaceOpen()) return;
-    body.classList.remove('is-hovering');
-    scheduleHitRegionUpdate();
+    body.classList.remove('is-hovering'); scheduleHitRegionUpdate();
   }, 190);
 }
 
@@ -747,9 +531,7 @@ clockBody.addEventListener('pointerdown', event => {
   if (event.button !== 0 || config.locked || isInteractiveTarget(event.target)) return;
   if (isTauri) invoke('start_dragging');
 });
-
 clockBody.addEventListener('contextmenu', openContextMenu);
-
 clockBody.addEventListener('pointerenter', showInteractionSurfaces);
 clockBody.addEventListener('pointermove', showInteractionSurfaces);
 clockBody.addEventListener('pointerleave', hideInteractionSurfacesSoon);
@@ -762,166 +544,113 @@ btnSettings.addEventListener('click', () => {
   if (settingsPanel.classList.contains('hidden')) openSettings(anchorFromElement(btnSettings));
   else closeSettings();
 });
-
 btnCloseSettings.addEventListener('click', closeSettings);
 document.getElementById('btn-cancel').addEventListener('click', closeSettings);
 document.getElementById('btn-apply').addEventListener('click', applySettings);
 
-btnLock.addEventListener('click', async () => {
-  applyLock(!config.locked);
-  await saveConfig();
-});
-
-btnOnTop.addEventListener('click', async () => {
-  applyOnTop(!config.on_top);
-  await saveConfig();
-});
-
+btnLock.addEventListener('click', async () => { applyLock(!config.locked); await saveConfig(); });
+btnOnTop.addEventListener('click', async () => { applyOnTop(!config.on_top); await saveConfig(); });
 btnPomodoro.addEventListener('click', togglePomodoro);
+btnHide.addEventListener('click', () => { if (isTauri) invoke('hide_window'); });
 
-btnHide.addEventListener('click', () => {
-  if (isTauri) invoke('hide_window');
+document.querySelectorAll('input[name="clock-count"]').forEach(i => {
+  i.addEventListener('change', syncSettingsClockCountVisibility);
 });
-
-document.querySelectorAll('input[name="clock-count"]').forEach(input => {
-  input.addEventListener('change', syncSettingsClockCountVisibility);
-});
-
-modeBtns.forEach(button => button.addEventListener('click', async () => {
-  applyMode(button.dataset.mode);
-  await saveConfig();
-}));
-
-menuOpacity.addEventListener('input', () => applyOpacity(menuOpacity.value));
-menuOpacity.addEventListener('change', saveConfig);
+modeBtns.forEach(b => b.addEventListener('click', async () => { applyMode(b.dataset.mode); await saveConfig(); }));
 setOpacity.addEventListener('input', () => applyOpacity(setOpacity.value));
 
 contextMenu.addEventListener('click', async event => {
   const action = event.target.closest('[data-menu-action]')?.dataset.menuAction;
   if (!action) return;
-
   if (action === 'toggle-pomodoro') togglePomodoro();
   if (action === 'reset-pomodoro') resetPomodoro();
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
   if (action === 'open-settings') openSettings({ x: event.clientX, y: event.clientY });
-
   if (action !== 'open-settings') closeContextMenu();
   await saveConfig();
 });
 
 document.addEventListener('pointerdown', event => {
-  const insideSurface = event.target.closest('#context-menu, #settings-panel, #hover-controls, #mode-bar, #object-shell');
-  if (!insideSurface) closeFloatingSurfaces();
+  const inside = event.target.closest('#context-menu, #settings-panel, #hover-controls, #mode-bar, #object-shell');
+  if (!inside) closeFloatingSurfaces();
 });
-
-document.addEventListener('keydown', event => {
-  if (event.key === 'Escape') closeFloatingSurfaces();
-});
-
+document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFloatingSurfaces(); });
 window.addEventListener('resize', scheduleHitRegionUpdate);
 
-function isHitRegionVisible(element) {
-  if (element.classList.contains('hidden')) return false;
-  const style = window.getComputedStyle(element);
-  if (style.display === 'none' || style.visibility === 'hidden') return false;
-  if (style.pointerEvents === 'none') return false;
-  if (Number(style.opacity) <= 0.03) return false;
-  const rect = element.getBoundingClientRect();
-  return rect.width > 2 && rect.height > 2;
+// ── hit regions ───────────────────────────────────────────────────────────
+
+function isHitRegionVisible(el) {
+  if (el.classList.contains('hidden')) return false;
+  const s = window.getComputedStyle(el);
+  if (s.display === 'none' || s.visibility === 'hidden' || s.pointerEvents === 'none') return false;
+  if (Number(s.opacity) <= 0.03) return false;
+  const r = el.getBoundingClientRect();
+  return r.width > 2 && r.height > 2;
 }
 
 function collectHitRegions() {
   const scale = window.devicePixelRatio || 1;
-  const isSolidSurface = body.classList.contains('surface-solid');
-  return [...document.querySelectorAll('[data-hit-region]')]
-    .filter(isHitRegionVisible)
-    .map(element => {
-      const isClockCard = element.classList.contains('clock-card');
-      const rect = isClockCard && !isSolidSurface
-        ? visibleClockRect(element)
-        : element.getBoundingClientRect();
-      const radius = isClockCard && !isSolidSurface ? 14 : Number(element.dataset.hitRadius || 12);
-      const pad = isClockCard && !isSolidSurface ? 12 : Number(element.dataset.hitPad || 0);
-      const left = Math.max(0, rect.left - pad);
-      const top = Math.max(0, rect.top - pad);
-      const right = Math.min(window.innerWidth, rect.right + pad);
-      const bottom = Math.min(window.innerHeight, rect.bottom + pad);
-      return {
-        x: Math.round(left * scale),
-        y: Math.round(top * scale),
-        width: Math.round((right - left) * scale),
-        height: Math.round((bottom - top) * scale),
-        radius: Math.round((radius + pad) * scale),
-      };
+  const isSolid = body.classList.contains('surface-solid');
+
+  const regions = [];
+
+  // clock content area
+  const clockRect = mainEl.getBoundingClientRect();
+  if (clockRect.width > 2 && clockRect.height > 2) {
+    const pad = isSolid ? 20 : 8;
+    regions.push({
+      x: Math.round((clockRect.left - pad) * scale),
+      y: Math.round((clockRect.top - pad) * scale),
+      width: Math.round((clockRect.width + pad * 2) * scale),
+      height: Math.round((clockRect.height + pad * 2) * scale),
+      radius: Math.round(14 * scale),
     });
-}
+  }
 
-function visibleClockRect(card) {
-  const visibleParts = [...card.querySelectorAll('.city-label, .digital-time, .digital-date, .analog-clock, .offset-label')]
-    .filter(part => {
-      if (part.classList.contains('offset-label') && !part.textContent.trim()) return false;
-      const style = window.getComputedStyle(part);
-      if (style.display === 'none' || style.visibility === 'hidden') return false;
-      const rect = part.getBoundingClientRect();
-      return rect.width > 1 && rect.height > 1;
-    })
-    .map(part => part.getBoundingClientRect());
+  // control surfaces
+  [...document.querySelectorAll('[data-hit-region]')]
+    .filter(el => !el.id.startsWith('card-') && isHitRegionVisible(el))
+    .forEach(el => {
+      const rect = el.getBoundingClientRect();
+      const radius = Number(el.dataset.hitRadius || 12);
+      const pad = Number(el.dataset.hitPad || 0);
+      regions.push({
+        x: Math.round((rect.left - pad) * scale),
+        y: Math.round((rect.top - pad) * scale),
+        width: Math.round((rect.width + pad * 2) * scale),
+        height: Math.round((rect.height + pad * 2) * scale),
+        radius: Math.round((radius + pad) * scale),
+      });
+    });
 
-  if (!visibleParts.length) return card.getBoundingClientRect();
-
-  const left = Math.min(...visibleParts.map(rect => rect.left));
-  const top = Math.min(...visibleParts.map(rect => rect.top));
-  const right = Math.max(...visibleParts.map(rect => rect.right));
-  const bottom = Math.max(...visibleParts.map(rect => rect.bottom));
-
-  return {
-    left,
-    top,
-    right,
-    bottom,
-    width: right - left,
-    height: bottom - top,
-  };
+  return regions;
 }
 
 function updateHitRegions() {
   hitRegionFrame = 0;
   if (!isTauri) return;
-  const regions = collectHitRegions();
-  invoke('set_hit_test_regions', { regions });
+  invoke('set_hit_test_regions', { regions: collectHitRegions() });
 }
-
 function scheduleHitRegionUpdate() {
   if (hitRegionFrame) return;
   hitRegionFrame = window.requestAnimationFrame(updateHitRegions);
 }
 
+// ── tauri events ──────────────────────────────────────────────────────────
+
 if (isTauri) {
-  listen('tray-set-lock', async e => {
-    applyLock(Boolean(e.payload));
-    await saveConfig();
-  });
-  listen('tray-set-theme', async e => {
-    applyTheme(e.payload);
-    await saveConfig();
-  });
-  listen('tray-set-ontop', async e => {
-    applyOnTop(Boolean(e.payload));
-    await saveConfig();
-  });
+  listen('tray-set-lock', async e => { applyLock(Boolean(e.payload)); await saveConfig(); });
+  listen('tray-set-theme', async e => { applyTheme(e.payload); await saveConfig(); });
+  listen('tray-set-ontop', async e => { applyOnTop(Boolean(e.payload)); await saveConfig(); });
 }
+
+// ── init ──────────────────────────────────────────────────────────────────
 
 async function init() {
   try {
     await loadConfig();
-
-    drawTicks('ticks-1');
-    drawTicks('ticks-2');
-
-    document.getElementById('label-1').textContent = config.clocks[0].label;
-    document.getElementById('label-2').textContent = config.clocks[1].label;
 
     applyTheme(config.theme);
     applySurfaceStyle(config.surfaceStyle);
@@ -933,13 +662,13 @@ async function init() {
     applyOnTop(config.on_top);
     resetPomodoro();
 
+    buildClocks();
     startClock();
     scheduleHitRegionUpdate();
-    window.setTimeout(scheduleHitRegionUpdate, 300);
-    window.__worldClockMainLoaded = true;
-  } catch (error) {
-    console.error('init failed', error);
-    setPomodoroStatus(`WorldClock Error: ${String(error).slice(0, 70)}`);
+    window.setTimeout(scheduleHitRegionUpdate, 400);
+  } catch (e) {
+    console.error('init failed', e);
+    setPomodoroStatus(`Error: ${String(e).slice(0, 70)}`);
   }
 }
 

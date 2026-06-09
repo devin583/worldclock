@@ -4,48 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link rel="stylesheet" href="style.css?v=apple1" />
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Manrope:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="flip-clock.css" />
+  <link rel="stylesheet" href="analog-clock.css" />
+  <link rel="stylesheet" href="world-clock.css" />
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body class="theme-minimal-glass surface-transparent clock-count-2">
+<body class="theme-classic surface-transparent clock-count-2">
   <div id="stage">
     <section id="clock-body" aria-label="WorldClock clock body">
       <div id="object-shell">
         <div id="progress-ring" aria-hidden="true"></div>
 
         <div id="main">
-          <div class="clock-card" id="card-1" data-hit-region data-hit-radius="42" data-hit-pad="34">
-            <div class="city-label" id="label-1">Budapest</div>
-            <div class="digital-time" id="digital-1">00:00:00</div>
-            <div class="digital-date" id="date-1">Mon, 01 Jan</div>
-
-            <svg class="analog-clock" id="analog-1" viewBox="0 0 200 200">
-              <circle class="clock-face" cx="100" cy="100" r="95"/>
-              <g id="ticks-1"></g>
-              <line class="hand hour-hand" id="hour-1" x1="100" y1="100" x2="100" y2="48"/>
-              <line class="hand minute-hand" id="minute-1" x1="100" y1="100" x2="100" y2="26"/>
-              <line class="hand second-hand" id="second-1" x1="100" y1="100" x2="100" y2="18"/>
-              <circle class="center-dot" cx="100" cy="100" r="6"/>
-            </svg>
-
-            <div class="offset-label" id="offset-1"></div>
-          </div>
-
-          <div class="clock-card" id="card-2" data-hit-region data-hit-radius="42" data-hit-pad="34">
-            <div class="city-label" id="label-2">Beijing</div>
-            <div class="digital-time" id="digital-2">00:00:00</div>
-            <div class="digital-date" id="date-2">Mon, 01 Jan</div>
-
-            <svg class="analog-clock" id="analog-2" viewBox="0 0 200 200">
-              <circle class="clock-face" cx="100" cy="100" r="95"/>
-              <g id="ticks-2"></g>
-              <line class="hand hour-hand" id="hour-2" x1="100" y1="100" x2="100" y2="48"/>
-              <line class="hand minute-hand" id="minute-2" x1="100" y1="100" x2="100" y2="26"/>
-              <line class="hand second-hand" id="second-2" x1="100" y1="100" x2="100" y2="18"/>
-              <circle class="center-dot" cx="100" cy="100" r="6"/>
-            </svg>
-
-            <div class="offset-label" id="offset-2"></div>
-          </div>
+          <!-- Web Components inserted by JS -->
         </div>
 
         <div id="pomodoro-status" class="hidden" aria-live="polite"></div>
@@ -97,10 +69,6 @@
       <button data-menu-action="toggle-time-format" id="menu-format">切换 12h</button>
       <button data-menu-action="toggle-lock" id="menu-lock">锁定位置</button>
       <button data-menu-action="toggle-ontop" id="menu-ontop">始终置顶</button>
-      <label class="menu-range">
-        <span>背景透明度</span>
-        <input type="range" id="menu-opacity" min="0.72" max="1" step="0.04" value="0.88" />
-      </label>
       <button data-menu-action="open-settings">打开设置</button>
     </nav>
 
@@ -135,13 +103,12 @@
       <datalist id="timezone-options"></datalist>
 
       <section>
-        <label>外观</label>
+        <label>外观风格</label>
         <div class="radio-group">
-          <label><input type="radio" name="theme" value="minimal-glass" checked /> Minimal Glass</label>
-          <label><input type="radio" name="theme" value="mechanical" /> Mechanical</label>
-          <label><input type="radio" name="theme" value="soft-companion" /> Soft Companion</label>
-          <label><input type="radio" name="theme" value="flip" /> Flip Clock</label>
-          <label><input type="radio" name="theme" value="boundless" /> Boundless 无界</label>
+          <label><input type="radio" name="theme" value="classic" checked /> Classic 经典黑</label>
+          <label><input type="radio" name="theme" value="minimal" /> Minimal 浅色</label>
+          <label><input type="radio" name="theme" value="cute" /> Cute 可爱暖色</label>
+          <label><input type="radio" name="theme" value="glass" /> Glass 玻璃</label>
         </div>
       </section>
 
@@ -200,7 +167,6 @@
         status.textContent = String(event.message).slice(0, 90);
       }
     });
-
     window.addEventListener('unhandledrejection', event => {
       const status = document.getElementById('pomodoro-status');
       if (status && event?.reason) {
@@ -209,6 +175,10 @@
       }
     });
   </script>
-  <script src="main.js?v=boundless1"></script>
+  <script src="tz-util.js"></script>
+  <script src="flip-clock.js"></script>
+  <script src="analog-clock.js"></script>
+  <script src="world-clock.js"></script>
+  <script src="main.js"></script>
 </body>
 </html>

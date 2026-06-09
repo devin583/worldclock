@@ -1,0 +1,94 @@
+/* world-clock — zone label block + two-zone pair layouts ──────── */
+
+/* zone-meta: city + UTC offset + day/night + diff vs home ────── */
+.zone-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-family: "Manrope", system-ui, sans-serif;
+  --zm-fg: #f4f2ec;
+  --zm-sub: rgba(255,255,255,.52);
+  --zm-chip: rgba(255,255,255,.12);
+  --zm-chip-fg: rgba(255,255,255,.8);
+  --zm-accent: #e7894c;
+}
+.zone-meta.zm-light {
+  --zm-fg: #2a2620;
+  --zm-sub: rgba(60,52,42,.55);
+  --zm-chip: rgba(40,34,28,.08);
+  --zm-chip-fg: rgba(60,52,42,.75);
+  --zm-accent: #d2733a;
+}
+.zone-meta.zm-center { align-items: center; text-align: center; }
+
+.zm-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.zm-city {
+  font-size: 23px; font-weight: 600; letter-spacing: .01em;
+  color: var(--zm-fg);
+}
+.zm-off {
+  font-size: 12px; font-weight: 600; letter-spacing: .04em;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--zm-chip); color: var(--zm-chip-fg);
+  font-variant-numeric: tabular-nums;
+}
+.zm-dn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500; color: var(--zm-sub);
+}
+.zm-dn .zm-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
+}
+.zm-dn.day .zm-dot { background: #f0b24a; color: #f0b24a; }
+.zm-dn.night .zm-dot { background: #6b78c4; color: #6b78c4; }
+.zm-diff {
+  font-size: 14px; font-weight: 600; color: var(--zm-accent);
+  letter-spacing: .01em; white-space: nowrap;
+}
+
+/* world-pair: two zones with a difference marker ─────────────── */
+.world-pair {
+  display: inline-flex;
+  --wp-line: rgba(255,255,255,.12);
+  --wp-pill-bg: rgba(255,255,255,.1);
+  --wp-pill-fg: #f4f2ec;
+}
+.world-pair.wp-light { --wp-line: rgba(40,34,28,.12); --wp-pill-bg: rgba(40,34,28,.07); --wp-pill-fg: #2a2620; }
+
+/* stacked: city/meta on the left, clock on the right, two rows */
+.wp-stack { flex-direction: column; }
+.wp-stack .wp-zone {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 48px; min-width: 420px;
+}
+.wp-stack .wp-divider {
+  height: 1px; background: var(--wp-line);
+  margin: 22px 0; position: relative;
+}
+.wp-stack .wp-pill {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  background: var(--wp-pill-bg); color: var(--wp-pill-fg);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 13px; font-weight: 600; letter-spacing: .03em;
+  padding: 4px 12px; border-radius: 999px;
+}
+
+/* row: two clock columns side by side, diff pill in the middle */
+.wp-row { flex-direction: row; align-items: center; gap: 28px; }
+.wp-row .wp-zone {
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+}
+.wp-row .wp-mid {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  align-self: stretch; justify-content: center;
+}
+.wp-row .wp-mid .wp-line-v {
+  width: 1px; flex: 1; background: var(--wp-line);
+}
+.wp-row .wp-pill {
+  background: var(--wp-pill-bg); color: var(--wp-pill-fg);
+  font-family: "Manrope", system-ui, sans-serif;
+  font-size: 13px; font-weight: 700; letter-spacing: .02em;
+  padding: 5px 12px; border-radius: 999px; white-space: nowrap;
+}
