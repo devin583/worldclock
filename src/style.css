@@ -263,6 +263,7 @@ body.surface-open #mode-bar {
 }
 
 #context-menu {
+  position: fixed;
   width: 190px;
   padding: 7px;
 }
