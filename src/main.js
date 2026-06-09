@@ -384,6 +384,7 @@ function applyLock(locked) {
   btnLock.classList.toggle('locked', config.locked);
   btnLock.setAttribute('aria-label', config.locked ? '解锁位置' : '锁定位置');
   btnLock.title = config.locked ? '解锁位置' : '锁定位置';
+  objectShell.toggleAttribute('data-tauri-drag-region', !config.locked);
   if (isTauri) invoke('set_locked', { locked: config.locked });
   syncMenuLabels();
 }
@@ -578,7 +579,11 @@ async function applySettings() {
 function isInteractiveTarget(target) {
   return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls, #mode-bar'));
 }
-function showInteractionSurfaces() { body.classList.add('is-hovering'); scheduleHitRegionUpdate(); }
+function showInteractionSurfaces() {
+  if (body.classList.contains('is-hovering')) return; // already shown; hit-regions unchanged
+  body.classList.add('is-hovering');
+  scheduleHitRegionUpdate();
+}
 function hideInteractionSurfacesSoon() {
   window.setTimeout(() => {
     if (isSurfaceOpen()) return;
@@ -586,11 +591,8 @@ function hideInteractionSurfacesSoon() {
   }, 190);
 }
 
-clockBody.addEventListener('pointerdown', event => {
-  showInteractionSurfaces();
-  if (event.button !== 0 || config.locked || isInteractiveTarget(event.target)) return;
-  if (isTauri) invoke('start_dragging');
-});
+clockBody.addEventListener('pointerdown', showInteractionSurfaces);
+// drag is handled natively via data-tauri-drag-region on #object-shell (sync, no IPC latency)
 clockBody.addEventListener('contextmenu', openContextMenu);
 clockBody.addEventListener('pointerenter', showInteractionSurfaces);
 clockBody.addEventListener('pointermove', showInteractionSurfaces);
