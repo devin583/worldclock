@@ -142,6 +142,11 @@ function activeClockCount() { return normalizeClockCount(config.clockCount); }
 
 // ── clock component builder ───────────────────────────────────────────────
 
+// minimal/cute have light backgrounds → use 'light' scheme for zone-meta / analog colors
+function clockScheme() {
+  return (config.theme === 'minimal' || config.theme === 'cute') ? 'light' : 'dark';
+}
+
 function buildClocks() {
   mainEl.innerHTML = '';
 
@@ -161,19 +166,20 @@ function buildClocks() {
 }
 
 function buildSingleClock(mode, variant, lang, hour12, clock) {
+  const scheme = clockScheme();
   if (mode === 'analog') {
     const wrap = document.createElement('div');
     wrap.className = 'single-wrap';
 
     const a = document.createElement('analog-clock');
-    a.setAttribute('variant', 'dark');
+    a.setAttribute('variant', scheme);
     a.setAttribute('seconds', '');
     if (clock.tz) a.setAttribute('tz', clock.tz);
     a.style.cssText = '--size:180px';
     wrap.appendChild(a);
 
     const zm = document.createElement('zone-meta');
-    zm.setAttribute('variant', 'dark');
+    zm.setAttribute('variant', scheme);
     zm.setAttribute('tz', clock.tz);
     zm.setAttribute('label', clock.label);
     zm.setAttribute('lang', lang);
@@ -183,7 +189,7 @@ function buildSingleClock(mode, variant, lang, hour12, clock) {
     mainEl.appendChild(wrap);
   } else if (mode === 'both') {
     const d = document.createElement('dual-clock');
-    d.setAttribute('variant', 'dark');
+    d.setAttribute('variant', scheme);
     if (clock.tz) d.setAttribute('tz', clock.tz);
     d.setAttribute('meta', 'weekday,date,location');
     d.setAttribute('location', clock.label);
@@ -206,12 +212,13 @@ function buildSingleClock(mode, variant, lang, hour12, clock) {
 }
 
 function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
+  const scheme = clockScheme();
   if (mode === 'both') {
     const wrap = document.createElement('div');
     wrap.className = 'dual-both-wrap';
     [clockA, clockB].forEach(clock => {
       const d = document.createElement('dual-clock');
-      d.setAttribute('variant', 'dark');
+      d.setAttribute('variant', scheme);
       if (clock.tz) d.setAttribute('tz', clock.tz);
       d.setAttribute('meta', 'weekday,date,location');
       d.setAttribute('location', clock.label);
@@ -224,7 +231,7 @@ function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
     const wp = document.createElement('world-pair');
     wp.setAttribute('type', mode === 'analog' ? 'analog' : 'digital');
     wp.setAttribute('layout', 'row');
-    wp.setAttribute('variant', 'dark');
+    wp.setAttribute('variant', scheme);
     wp.setAttribute('lang', lang);
     wp.setAttribute('a-tz', clockA.tz);
     wp.setAttribute('a-label', clockA.label);
@@ -377,6 +384,7 @@ function applyLock(locked) {
   btnLock.classList.toggle('locked', config.locked);
   btnLock.setAttribute('aria-label', config.locked ? '解锁位置' : '锁定位置');
   btnLock.title = config.locked ? '解锁位置' : '锁定位置';
+  objectShell.toggleAttribute('data-tauri-drag-region', !config.locked);
   if (isTauri) invoke('set_locked', { locked: config.locked });
   syncMenuLabels();
 }
@@ -571,7 +579,11 @@ async function applySettings() {
 function isInteractiveTarget(target) {
   return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls, #mode-bar'));
 }
-function showInteractionSurfaces() { body.classList.add('is-hovering'); scheduleHitRegionUpdate(); }
+function showInteractionSurfaces() {
+  if (body.classList.contains('is-hovering')) return; // already shown; hit-regions unchanged
+  body.classList.add('is-hovering');
+  scheduleHitRegionUpdate();
+}
 function hideInteractionSurfacesSoon() {
   window.setTimeout(() => {
     if (isSurfaceOpen()) return;
@@ -579,11 +591,8 @@ function hideInteractionSurfacesSoon() {
   }, 190);
 }
 
-clockBody.addEventListener('pointerdown', event => {
-  showInteractionSurfaces();
-  if (event.button !== 0 || config.locked || isInteractiveTarget(event.target)) return;
-  if (isTauri) invoke('start_dragging');
-});
+clockBody.addEventListener('pointerdown', showInteractionSurfaces);
+// drag is handled natively via data-tauri-drag-region on #object-shell (sync, no IPC latency)
 clockBody.addEventListener('contextmenu', openContextMenu);
 clockBody.addEventListener('pointerenter', showInteractionSurfaces);
 clockBody.addEventListener('pointermove', showInteractionSurfaces);
