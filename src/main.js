@@ -492,6 +492,18 @@ async function openNativeContextMenu() {
   }
 }
 
+async function openNativeSettingsWindow() {
+  if (!isTauri) return false;
+  try {
+    await tauriInvoke('show_settings_window');
+    closeFloatingSurfaces();
+    return true;
+  } catch (e) {
+    console.warn('[settings window]', e);
+    return false;
+  }
+}
+
 // Returns screen bounds in viewport-relative CSS px; null if unavailable.
 async function getDisplayBounds() {
   if (!isTauri) return null;
@@ -558,7 +570,9 @@ async function openContextMenu(event) {
   setSurfaceOpenClass();
 }
 
-function openSettings(anchor = anchorFromElement(btnSettings)) {
+async function openSettings(anchor = anchorFromElement(btnSettings)) {
+  if (await openNativeSettingsWindow()) return;
+
   closeContextMenu();
   populateTimezoneOptions();
   document.getElementById('set-label-1').value = config.clocks[0].label;
@@ -629,6 +643,7 @@ hoverControls.addEventListener('transitionend', scheduleHitRegionUpdate);
 document.getElementById('mode-bar').addEventListener('transitionend', scheduleHitRegionUpdate);
 
 btnSettings.addEventListener('click', () => {
+  if (isTauri) { openSettings(anchorFromElement(btnSettings)); return; }
   if (settingsPanel.classList.contains('hidden')) openSettings(anchorFromElement(btnSettings));
   else closeSettings();
 });
@@ -654,7 +669,7 @@ async function handleContextMenuAction(action, anchor) {
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
-  if (action === 'open-settings') openSettings(anchor || anchorFromElement(btnSettings));
+  if (action === 'open-settings') await openSettings(anchor || anchorFromElement(btnSettings));
   if (action !== 'open-settings') closeContextMenu();
   await saveConfig();
 }
@@ -738,6 +753,18 @@ if (isTauri) {
   listen('tray-set-ontop', async e => { applyOnTop(Boolean(e.payload)); await saveConfig(); });
   listen('context-menu-action', async e => {
     await handleContextMenuAction(String(e.payload || ''), anchorFromElement(btnSettings));
+  });
+  listen('config-updated', async e => {
+    config = normalizeConfig(e.payload);
+    applyTheme(config.theme);
+    applySurfaceStyle(config.surfaceStyle);
+    applyClockCount(config.clockCount);
+    applyMode(config.mode);
+    applyTimeFormat(config.timeFormat);
+    applyOpacity(config.opacity);
+    applyLock(config.locked);
+    applyOnTop(config.on_top);
+    buildClocks();
   });
 }
 

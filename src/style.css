@@ -1,16 +1,16 @@
 :root {
   --clock-opacity: 0.88;
   --surface-bg: rgba(14, 16, 21, 0.97);
-  --surface-border: rgba(255, 255, 255, 0.20);
+  --surface-border: rgba(255, 255, 255, 0.24);
   --control-bg: rgba(255, 255, 255, 0.14);
   --control-active: rgba(255, 255, 255, 0.26);
   --control-hover: rgba(255, 255, 255, 0.22);
   --text-primary: rgba(252, 254, 255, 1);
   --text-secondary: rgba(246, 250, 255, 0.86);
-  --text-muted: rgba(238, 246, 255, 0.70);
+  --text-muted: rgba(238, 246, 255, 0.78);
   --accent-1: #e7894c;
-  --input-bg: rgba(255, 255, 255, 0.13);
-  --input-border: rgba(255, 255, 255, 0.28);
+  --input-bg: rgba(255, 255, 255, 0.15);
+  --input-border: rgba(255, 255, 255, 0.34);
   --progress: 0deg;
   --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);

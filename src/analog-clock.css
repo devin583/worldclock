@@ -13,19 +13,22 @@
 
 .analog {
   --size: 240px;
-  --face: transparent;
+  --face: rgba(28,30,38,.88);
   --ring: rgba(255,255,255,.20);
   --tick: rgba(255,255,255,.40);
   --tick-h: rgba(255,255,255,.92);
   --hand: #f4f2ec;
   --accent: #e7894c;
   --num: rgba(255,255,255,.95);
+  --face-shadow: 0 12px 28px rgba(0,0,0,.22);
   position: relative;
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
   background: var(--face);
-  box-shadow: inset 0 0 0 2px var(--ring);
+  box-shadow: inset 0 0 0 2px var(--ring), var(--face-shadow);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
   flex: 0 0 auto;
 }
 .analog .ac-tick {
@@ -94,6 +97,12 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding: 10px 14px;
+  border-radius: 18px;
+  background: var(--read-bg, rgba(6,8,12,.66));
+  box-shadow: inset 0 0 0 1px var(--read-border, rgba(255,255,255,.12)), 0 8px 20px rgba(0,0,0,.14);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
   font-family: var(--num-font, "Manrope", system-ui, sans-serif);
 }
 .dual .dl-time {
@@ -115,22 +124,36 @@
 
 /* ── color schemes ──────────────────────────────────────────── */
 .ac-dark {
-  --face: transparent;
-  --ring: rgba(255,255,255,.20);
-  --tick: rgba(255,255,255,.42);
+  --face: rgba(28,30,38,.90);
+  --ring: rgba(255,255,255,.16);
+  --tick: rgba(255,255,255,.34);
   --tick-h: rgba(255,255,255,.94);
   --hand: #f4f2ec;
   --num: rgba(255,255,255,.96);
   --accent: #e7894c;
+  --face-shadow: 0 12px 28px rgba(0,0,0,.22);
 }
 .ac-light {
-  --face: transparent;
-  --ring: rgba(40,34,28,.20);
-  --tick: rgba(40,34,28,.42);
+  --face: rgba(247,245,241,.92);
+  --ring: rgba(40,34,28,.14);
+  --tick: rgba(40,34,28,.36);
   --tick-h: rgba(40,34,28,.88);
   --hand: #2a2620;
   --num: rgba(40,34,28,.96);
   --accent: #d2733a;
+  --face-shadow: 0 12px 26px rgba(40,34,28,.14);
 }
-.dl-dark { --num: #f4f2ec; --sub: rgba(255,255,255,.72); --accent: #e7894c; }
-.dl-light { --num: #2a2620; --sub: rgba(45,39,32,.72); --accent: #d2733a; }
+.dl-dark {
+  --num: #f4f2ec;
+  --sub: rgba(255,255,255,.78);
+  --accent: #e7894c;
+  --read-bg: rgba(6,8,12,.66);
+  --read-border: rgba(255,255,255,.12);
+}
+.dl-light {
+  --num: #2a2620;
+  --sub: rgba(45,39,32,.78);
+  --accent: #d2733a;
+  --read-bg: rgba(255,250,242,.90);
+  --read-border: rgba(40,34,28,.10);
+}
