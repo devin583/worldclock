@@ -9,33 +9,41 @@ type TrayCheckItem = CheckMenuItem<tauri::Wry>;
 
 pub struct TrayMenuState {
     lock: TrayCheckItem,
-    theme_minimal_glass: TrayCheckItem,
-    theme_mechanical: TrayCheckItem,
-    theme_soft_companion: TrayCheckItem,
-    theme_flip: TrayCheckItem,
-    theme_boundless: TrayCheckItem,
+    theme_classic: TrayCheckItem,
+    theme_minimal: TrayCheckItem,
+    theme_cute: TrayCheckItem,
+    theme_glass: TrayCheckItem,
     ontop: TrayCheckItem,
 }
 
 impl TrayMenuState {
     fn new(
         lock: TrayCheckItem,
-        theme_minimal_glass: TrayCheckItem,
-        theme_mechanical: TrayCheckItem,
-        theme_soft_companion: TrayCheckItem,
-        theme_flip: TrayCheckItem,
-        theme_boundless: TrayCheckItem,
+        theme_classic: TrayCheckItem,
+        theme_minimal: TrayCheckItem,
+        theme_cute: TrayCheckItem,
+        theme_glass: TrayCheckItem,
         ontop: TrayCheckItem,
     ) -> Self {
         Self {
             lock,
-            theme_minimal_glass,
-            theme_mechanical,
-            theme_soft_companion,
-            theme_flip,
-            theme_boundless,
+            theme_classic,
+            theme_minimal,
+            theme_cute,
+            theme_glass,
             ontop,
         }
+    }
+}
+
+fn normalize_theme(theme: &str) -> &str {
+    match theme {
+        "minimal-glass" | "glass-pet" => "glass",
+        "mechanical" | "flip" | "dark" => "classic",
+        "soft-companion" | "moon-cat" => "cute",
+        "boundless" | "light" => "minimal",
+        "classic" | "minimal" | "cute" | "glass" => theme,
+        _ => "classic",
     }
 }
 
@@ -43,42 +51,29 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
     let show_hide = MenuItem::with_id(app, "show_hide", "显示 / 隐藏", true, None::<&str>)?;
     let reset_position =
         MenuItem::with_id(app, "reset_position", "重置窗口位置", true, None::<&str>)?;
+    let open_settings = MenuItem::with_id(app, "open_settings", "打开设置", true, None::<&str>)?;
     let lock = CheckMenuItem::with_id(app, "lock", "锁定位置", true, false, None::<&str>)?;
     let sep1 = PredefinedMenuItem::separator(app)?;
-    let theme_minimal_glass = CheckMenuItem::with_id(
+    let theme_classic = CheckMenuItem::with_id(
         app,
-        "theme_minimal_glass",
-        "Minimal Glass",
+        "theme_classic",
+        "Classic 经典黑",
         true,
         true,
         None::<&str>,
     )?;
-    let theme_mechanical = CheckMenuItem::with_id(
+    let theme_minimal = CheckMenuItem::with_id(
         app,
-        "theme_mechanical",
-        "Mechanical",
+        "theme_minimal",
+        "Minimal 浅色",
         true,
         false,
         None::<&str>,
     )?;
-    let theme_soft_companion = CheckMenuItem::with_id(
-        app,
-        "theme_soft_companion",
-        "Soft Companion",
-        true,
-        false,
-        None::<&str>,
-    )?;
-    let theme_flip =
-        CheckMenuItem::with_id(app, "theme_flip", "Flip Clock", true, false, None::<&str>)?;
-    let theme_boundless = CheckMenuItem::with_id(
-        app,
-        "theme_boundless",
-        "Boundless 无界",
-        true,
-        false,
-        None::<&str>,
-    )?;
+    let theme_cute =
+        CheckMenuItem::with_id(app, "theme_cute", "Cute 暖色", true, false, None::<&str>)?;
+    let theme_glass =
+        CheckMenuItem::with_id(app, "theme_glass", "Glass 玻璃", true, false, None::<&str>)?;
     let sep2 = PredefinedMenuItem::separator(app)?;
     let ontop = CheckMenuItem::with_id(app, "toggle_ontop", "始终置顶", true, true, None::<&str>)?;
     let sep3 = PredefinedMenuItem::separator(app)?;
@@ -89,13 +84,13 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         &[
             &show_hide,
             &reset_position,
+            &open_settings,
             &lock,
             &sep1,
-            &theme_minimal_glass,
-            &theme_mechanical,
-            &theme_soft_companion,
-            &theme_flip,
-            &theme_boundless,
+            &theme_classic,
+            &theme_minimal,
+            &theme_cute,
+            &theme_glass,
             &sep2,
             &ontop,
             &sep3,
@@ -110,11 +105,10 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
 
     app.manage(TrayMenuState::new(
         lock.clone(),
-        theme_minimal_glass.clone(),
-        theme_mechanical.clone(),
-        theme_soft_companion.clone(),
-        theme_flip.clone(),
-        theme_boundless.clone(),
+        theme_classic.clone(),
+        theme_minimal.clone(),
+        theme_cute.clone(),
+        theme_glass.clone(),
         ontop.clone(),
     ));
 
@@ -126,18 +120,23 @@ pub fn setup_tray(app: &AppHandle) -> tauri::Result<()> {
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "show_hide" => toggle_window(app),
             "reset_position" => crate::reset_main_window_position(app),
+            "open_settings" => {
+                let _ = crate::open_settings_window(app);
+            }
             "lock" => {
                 let checked = lock_item.is_checked().unwrap_or(false);
                 let _ = app.emit("tray-set-lock", checked);
             }
-            "theme_minimal_glass" => set_theme_from_tray(app, "minimal-glass"),
-            "theme_mechanical" => set_theme_from_tray(app, "mechanical"),
-            "theme_soft_companion" => set_theme_from_tray(app, "soft-companion"),
-            "theme_flip" => set_theme_from_tray(app, "flip"),
-            "theme_boundless" => set_theme_from_tray(app, "boundless"),
+            "theme_classic" => set_theme_from_tray(app, "classic"),
+            "theme_minimal" => set_theme_from_tray(app, "minimal"),
+            "theme_cute" => set_theme_from_tray(app, "cute"),
+            "theme_glass" => set_theme_from_tray(app, "glass"),
             "toggle_ontop" => {
                 let checked = ontop_item.is_checked().unwrap_or(true);
                 if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.set_always_on_top(checked);
+                }
+                if let Some(win) = app.get_webview_window("settings") {
                     let _ = win.set_always_on_top(checked);
                 }
                 let _ = app.emit("tray-set-ontop", checked);
@@ -168,15 +167,11 @@ pub fn set_lock_checked(app: &AppHandle, checked: bool) {
 
 pub fn set_theme_checked(app: &AppHandle, theme: &str) {
     if let Some(state) = app.try_state::<TrayMenuState>() {
-        let _ = state
-            .theme_minimal_glass
-            .set_checked(theme == "minimal-glass");
-        let _ = state.theme_mechanical.set_checked(theme == "mechanical");
-        let _ = state
-            .theme_soft_companion
-            .set_checked(theme == "soft-companion");
-        let _ = state.theme_flip.set_checked(theme == "flip");
-        let _ = state.theme_boundless.set_checked(theme == "boundless");
+        let theme = normalize_theme(theme);
+        let _ = state.theme_classic.set_checked(theme == "classic");
+        let _ = state.theme_minimal.set_checked(theme == "minimal");
+        let _ = state.theme_cute.set_checked(theme == "cute");
+        let _ = state.theme_glass.set_checked(theme == "glass");
     }
 }
 
