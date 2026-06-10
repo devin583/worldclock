@@ -470,6 +470,28 @@ function anchorFromElement(el) {
   return { x: r.left + r.width / 2, y: r.bottom };
 }
 
+function getContextMenuState() {
+  return {
+    locked: config.locked,
+    on_top: config.on_top,
+    time_format: config.timeFormat,
+    pomodoro_running: pomodoroState.running,
+    pomodoro_idle: pomodoroState.phase === 'idle',
+  };
+}
+
+async function openNativeContextMenu() {
+  if (!isTauri) return false;
+  try {
+    await tauriInvoke('show_context_menu', { state: getContextMenuState() });
+    closeContextMenu();
+    return true;
+  } catch (e) {
+    console.warn('[native context menu]', e);
+    return false;
+  }
+}
+
 // Returns screen bounds in viewport-relative CSS px; null if unavailable.
 async function getDisplayBounds() {
   if (!isTauri) return null;
@@ -499,6 +521,10 @@ async function getDisplayBounds() {
 async function openContextMenu(event) {
   event.preventDefault();
   closeSettings(); syncMenuLabels();
+
+  // In Tauri, use the OS popup menu. HTML menus are clipped by the widget
+  // window and cannot behave like desktop-pet context menus on Windows.
+  if (await openNativeContextMenu()) return;
 
   const cx = event.clientX;
   const cy = event.clientY;
@@ -621,17 +647,21 @@ document.querySelectorAll('input[name="clock-count"]').forEach(i => {
 modeBtns.forEach(b => b.addEventListener('click', async () => { applyMode(b.dataset.mode); await saveConfig(); }));
 setOpacity.addEventListener('input', () => applyOpacity(setOpacity.value));
 
-contextMenu.addEventListener('click', async event => {
-  const action = event.target.closest('[data-menu-action]')?.dataset.menuAction;
+async function handleContextMenuAction(action, anchor) {
   if (!action) return;
   if (action === 'toggle-pomodoro') togglePomodoro();
   if (action === 'reset-pomodoro') resetPomodoro();
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
-  if (action === 'open-settings') openSettings({ x: event.clientX, y: event.clientY });
+  if (action === 'open-settings') openSettings(anchor || anchorFromElement(btnSettings));
   if (action !== 'open-settings') closeContextMenu();
   await saveConfig();
+}
+
+contextMenu.addEventListener('click', async event => {
+  const action = event.target.closest('[data-menu-action]')?.dataset.menuAction;
+  await handleContextMenuAction(action, { x: event.clientX, y: event.clientY });
 });
 
 document.addEventListener('pointerdown', event => {
@@ -706,6 +736,9 @@ if (isTauri) {
   listen('tray-set-lock', async e => { applyLock(Boolean(e.payload)); await saveConfig(); });
   listen('tray-set-theme', async e => { applyTheme(e.payload); await saveConfig(); });
   listen('tray-set-ontop', async e => { applyOnTop(Boolean(e.payload)); await saveConfig(); });
+  listen('context-menu-action', async e => {
+    await handleContextMenuAction(String(e.payload || ''), anchorFromElement(btnSettings));
+  });
 }
 
 // ── init ──────────────────────────────────────────────────────────────────

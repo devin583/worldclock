@@ -7,17 +7,34 @@
   gap: 7px;
   font-family: "Manrope", system-ui, sans-serif;
   --zm-fg: #f4f2ec;
-  --zm-sub: rgba(255,255,255,.52);
-  --zm-chip: rgba(255,255,255,.12);
-  --zm-chip-fg: rgba(255,255,255,.8);
+  --zm-sub: rgba(255,255,255,.82);
+  --zm-chip: rgba(255,255,255,.22);
+  --zm-chip-fg: rgba(255,255,255,.88);
   --zm-accent: #e7894c;
+  --zm-halo: rgba(6,8,12,.62);
+  position: relative;
+  isolation: isolate;
+  padding: 6px 10px;
+  border-radius: 16px;
+  text-shadow: 0 1px 4px rgba(0,0,0,.55);
+}
+.zone-meta::before {
+  content: "";
+  position: absolute;
+  inset: -2px -4px;
+  z-index: -1;
+  border-radius: 18px;
+  background: var(--zm-halo);
+  filter: blur(.2px);
 }
 .zone-meta.zm-light {
   --zm-fg: #2a2620;
-  --zm-sub: rgba(60,52,42,.55);
-  --zm-chip: rgba(40,34,28,.08);
-  --zm-chip-fg: rgba(60,52,42,.75);
+  --zm-sub: rgba(45,39,32,.78);
+  --zm-chip: rgba(40,34,28,.10);
+  --zm-chip-fg: rgba(45,39,32,.86);
   --zm-accent: #d2733a;
+  --zm-halo: rgba(255,250,242,.84);
+  text-shadow: 0 1px 0 rgba(255,255,255,.68);
 }
 .zone-meta.zm-center { align-items: center; text-align: center; }
 
@@ -41,7 +58,8 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 14%, transparent);
 }
 .zm-dn.day .zm-dot { background: #f0b24a; color: #f0b24a; }
-.zm-dn.night .zm-dot { background: #6b78c4; color: #6b78c4; }
+.zm-dn.night .zm-dot { background: rgba(244,242,236,.74); color: rgba(244,242,236,.74); }
+.zone-meta.zm-light .zm-dn.night .zm-dot { background: rgba(42,38,32,.68); color: rgba(42,38,32,.68); }
 .zm-diff {
   font-size: 14px; font-weight: 600; color: var(--zm-accent);
   letter-spacing: .01em; white-space: nowrap;
@@ -50,11 +68,11 @@
 /* world-pair: two zones with a difference marker ─────────────── */
 .world-pair {
   display: inline-flex;
-  --wp-line: rgba(255,255,255,.12);
-  --wp-pill-bg: rgba(255,255,255,.1);
+  --wp-line: rgba(255,255,255,.18);
+  --wp-pill-bg: rgba(255,255,255,.16);
   --wp-pill-fg: #f4f2ec;
 }
-.world-pair.wp-light { --wp-line: rgba(40,34,28,.12); --wp-pill-bg: rgba(40,34,28,.07); --wp-pill-fg: #2a2620; }
+.world-pair.wp-light { --wp-line: rgba(40,34,28,.18); --wp-pill-bg: rgba(255,250,242,.82); --wp-pill-fg: #2a2620; }
 
 /* stacked: city/meta on the left, clock on the right, two rows */
 .wp-stack { flex-direction: column; }

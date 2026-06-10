@@ -14,12 +14,12 @@
 .analog {
   --size: 240px;
   --face: transparent;
-  --ring: rgba(255,255,255,.14);
-  --tick: rgba(255,255,255,.28);
-  --tick-h: rgba(255,255,255,.85);
+  --ring: rgba(255,255,255,.20);
+  --tick: rgba(255,255,255,.40);
+  --tick-h: rgba(255,255,255,.92);
   --hand: #f4f2ec;
   --accent: #e7894c;
-  --num: rgba(255,255,255,.9);
+  --num: rgba(255,255,255,.95);
   position: relative;
   width: var(--size);
   height: var(--size);
@@ -109,28 +109,28 @@
   font-size: 19px;
   font-weight: 500;
   letter-spacing: .04em;
-  color: var(--sub, rgba(255,255,255,.55));
+  color: var(--sub, rgba(255,255,255,.72));
 }
 .dual .dl-sub .dl-accent { color: var(--accent, #e7894c); }
 
 /* ── color schemes ──────────────────────────────────────────── */
 .ac-dark {
   --face: transparent;
-  --ring: rgba(255,255,255,.13);
-  --tick: rgba(255,255,255,.30);
-  --tick-h: rgba(255,255,255,.88);
+  --ring: rgba(255,255,255,.20);
+  --tick: rgba(255,255,255,.42);
+  --tick-h: rgba(255,255,255,.94);
   --hand: #f4f2ec;
-  --num: rgba(255,255,255,.9);
+  --num: rgba(255,255,255,.96);
   --accent: #e7894c;
 }
 .ac-light {
   --face: transparent;
-  --ring: rgba(40,34,28,.12);
-  --tick: rgba(40,34,28,.28);
-  --tick-h: rgba(40,34,28,.78);
+  --ring: rgba(40,34,28,.20);
+  --tick: rgba(40,34,28,.42);
+  --tick-h: rgba(40,34,28,.88);
   --hand: #2a2620;
-  --num: rgba(40,34,28,.9);
+  --num: rgba(40,34,28,.96);
   --accent: #d2733a;
 }
-.dl-dark { --num: #f4f2ec; --sub: rgba(255,255,255,.5); --accent: #e7894c; }
-.dl-light { --num: #2a2620; --sub: rgba(60,52,42,.55); --accent: #d2733a; }
+.dl-dark { --num: #f4f2ec; --sub: rgba(255,255,255,.72); --accent: #e7894c; }
+.dl-light { --num: #2a2620; --sub: rgba(45,39,32,.72); --accent: #d2733a; }

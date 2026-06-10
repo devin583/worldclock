@@ -5,8 +5,8 @@
    <analog-clock> for the actual dials.
    ─────────────────────────────────────────────────────────── */
 (function () {
-  const FLIP_DARK = '--w:48px;--h:70px;--fs:56px;--gap-g:14px;--gap-d:5px;--card:#2b2d35;--card-hi:#3a3d47;--card-lo:#1f2128;--digit:#f5f3ee;--seam:rgba(0,0,0,.45);--shadow:0 5px 12px rgba(0,0,0,.4)';
-  const FLIP_LIGHT = '--w:48px;--h:70px;--fs:56px;--gap-g:14px;--gap-d:5px;--card:#23242a;--card-hi:#33353d;--card-lo:#16171c;--digit:#f7f6f2;--seam:rgba(0,0,0,.5);--shadow:0 5px 10px rgba(40,34,28,.22)';
+  const FLIP_DARK = '--w:48px;--h:70px;--fs:56px;--gap-g:14px;--gap-d:5px;--card:#2b2d35;--card-hi:#3a3d47;--card-lo:#1f2128;--digit:#f5f3ee;--seam:rgba(0,0,0,.52);--shadow:0 8px 18px rgba(0,0,0,.35)';
+  const FLIP_LIGHT = '--w:48px;--h:70px;--fs:56px;--gap-g:14px;--gap-d:5px;--card:#f7f5f1;--card-hi:#ffffff;--card-lo:#ece9e3;--digit:#232220;--seam:rgba(0,0,0,.08);--shadow:0 8px 18px rgba(0,0,0,.22)';
 
   // ── zone-meta ──────────────────────────────────────────────
   class ZoneMeta extends HTMLElement {
@@ -67,7 +67,7 @@
     }
     // digital
     const f = document.createElement('flip-clock');
-    f.setAttribute('variant', scheme === 'dark' ? 'minimal' : 'classic');
+    f.setAttribute('variant', scheme === 'dark' ? 'classic' : 'minimal');
     f.setAttribute('fields', 'hm');
     if (tz) f.setAttribute('tz', tz);
     f.style.cssText = scheme === 'dark' ? FLIP_DARK : FLIP_LIGHT;
