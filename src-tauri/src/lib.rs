@@ -8,7 +8,9 @@ use std::{
     path::PathBuf,
 };
 use tauri::{
-    AppHandle, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewWindow, WindowEvent,
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewWindow,
+    WindowEvent,
 };
 
 const MIN_WINDOW_WIDTH: u32 = 360;
@@ -28,6 +30,15 @@ struct HitTestRegion {
     width: i32,
     height: i32,
     radius: i32,
+}
+
+#[derive(Debug, Deserialize)]
+struct ContextMenuState {
+    locked: bool,
+    on_top: bool,
+    time_format: String,
+    pomodoro_running: bool,
+    pomodoro_idle: bool,
 }
 
 fn startup_log_path() -> PathBuf {
@@ -254,6 +265,119 @@ fn start_dragging(window: WebviewWindow) {
 }
 
 #[tauri::command]
+fn show_context_menu(
+    app: AppHandle,
+    window: WebviewWindow,
+    state: ContextMenuState,
+) -> Result<(), String> {
+    let pomodoro_label = if state.pomodoro_running {
+        "暂停番茄钟"
+    } else if state.pomodoro_idle {
+        "开始番茄钟"
+    } else {
+        "继续番茄钟"
+    };
+    let time_format_label = if state.time_format == "24" {
+        "切换 12 小时制"
+    } else {
+        "切换 24 小时制"
+    };
+
+    let pomodoro = MenuItem::with_id(
+        &app,
+        "context_toggle_pomodoro",
+        pomodoro_label,
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let reset_pomodoro = MenuItem::with_id(
+        &app,
+        "context_reset_pomodoro",
+        "重置番茄钟",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let sep1 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let time_format = MenuItem::with_id(
+        &app,
+        "context_toggle_time_format",
+        time_format_label,
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let lock = CheckMenuItem::with_id(
+        &app,
+        "context_toggle_lock",
+        "锁定位置",
+        true,
+        state.locked,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let ontop = CheckMenuItem::with_id(
+        &app,
+        "context_toggle_ontop",
+        "始终置顶",
+        true,
+        state.on_top,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let sep2 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let settings = MenuItem::with_id(
+        &app,
+        "context_open_settings",
+        "打开设置",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let reset_window = MenuItem::with_id(
+        &app,
+        "context_reset_window",
+        "重置窗口位置",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let hide = MenuItem::with_id(
+        &app,
+        "context_hide_window",
+        "最小化到托盘",
+        true,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let sep3 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let quit = MenuItem::with_id(&app, "context_quit", "退出 WorldClock", true, None::<&str>)
+        .map_err(|e| e.to_string())?;
+
+    let menu = Menu::with_items(
+        &app,
+        &[
+            &pomodoro,
+            &reset_pomodoro,
+            &sep1,
+            &time_format,
+            &lock,
+            &ontop,
+            &sep2,
+            &settings,
+            &reset_window,
+            &hide,
+            &sep3,
+            &quit,
+        ],
+    )
+    .map_err(|e| e.to_string())?;
+
+    window.popup_menu(&menu).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn set_hit_test_regions(window: WebviewWindow, regions: Vec<HitTestRegion>) -> Result<(), String> {
     #[cfg(target_os = "windows")]
     {
@@ -389,6 +513,10 @@ fn set_autostart_enabled(_enabled: bool) -> Result<(), String> {
     Ok(())
 }
 
+fn emit_context_action(app: &AppHandle, action: &str) {
+    let _ = app.emit("context-menu-action", action);
+}
+
 /* ── 应用入口 ── */
 pub fn run() {
     std::panic::set_hook(Box::new(|panic_info| {
@@ -398,6 +526,22 @@ pub fn run() {
     log_startup("run() entered");
 
     tauri::Builder::default()
+        .on_menu_event(|app, event| match event.id().as_ref() {
+            "context_toggle_pomodoro" => emit_context_action(app, "toggle-pomodoro"),
+            "context_reset_pomodoro" => emit_context_action(app, "reset-pomodoro"),
+            "context_toggle_time_format" => emit_context_action(app, "toggle-time-format"),
+            "context_toggle_lock" => emit_context_action(app, "toggle-lock"),
+            "context_toggle_ontop" => emit_context_action(app, "toggle-ontop"),
+            "context_open_settings" => emit_context_action(app, "open-settings"),
+            "context_reset_window" => reset_main_window_position(app),
+            "context_hide_window" => {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.hide();
+                }
+            }
+            "context_quit" => app.exit(0),
+            _ => {}
+        })
         .setup(|_app| {
             log_startup("setup() entered");
 
@@ -438,6 +582,7 @@ pub fn run() {
             set_locked,
             set_theme,
             start_dragging,
+            show_context_menu,
             set_hit_test_regions,
             set_autostart,
             save_config,
