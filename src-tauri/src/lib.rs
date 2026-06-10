@@ -9,8 +9,8 @@ use std::{
 };
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewWindow,
-    WindowEvent,
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
+    WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 
 const MIN_WINDOW_WIDTH: u32 = 360;
@@ -19,6 +19,8 @@ const MAX_WINDOW_WIDTH: u32 = 1200;
 const MAX_WINDOW_HEIGHT: u32 = 680;
 const DEFAULT_WINDOW_WIDTH: u32 = 860;
 const DEFAULT_WINDOW_HEIGHT: u32 = 360;
+const SETTINGS_WINDOW_WIDTH: f64 = 430.0;
+const SETTINGS_WINDOW_HEIGHT: f64 = 640.0;
 const MIN_VISIBLE_WIDTH: i32 = 80;
 const MIN_VISIBLE_HEIGHT: i32 = 80;
 
@@ -125,6 +127,54 @@ fn safe_window_position(
     centered_position(app, width, height).unwrap_or(PhysicalPosition { x: 80, y: 80 })
 }
 
+fn clamp_position(value: i32, min: i32, max: i32) -> i32 {
+    if min > max {
+        min
+    } else {
+        value.clamp(min, max)
+    }
+}
+
+fn settings_window_position(window: &WebviewWindow) -> Option<(f64, f64)> {
+    let main_pos = window.outer_position().ok()?;
+    let main_size = window.outer_size().ok()?;
+    let monitor = window.current_monitor().ok().flatten()?;
+    let scale = monitor.scale_factor().max(1.0);
+    let work_area = monitor.work_area();
+    let work_pos = work_area.position;
+    let work_size = work_area.size;
+
+    let settings_w = (SETTINGS_WINDOW_WIDTH * scale).round() as i32;
+    let settings_h = (SETTINGS_WINDOW_HEIGHT * scale).round() as i32;
+    let gap = (14.0 * scale).round() as i32;
+    let work_left = work_pos.x;
+    let work_top = work_pos.y;
+    let work_right = work_left.saturating_add(work_size.width as i32);
+    let work_bottom = work_top.saturating_add(work_size.height as i32);
+
+    let mut left = main_pos
+        .x
+        .saturating_add(main_size.width as i32)
+        .saturating_add(gap);
+    if left.saturating_add(settings_w) > work_right {
+        left = main_pos.x.saturating_sub(settings_w).saturating_sub(gap);
+    }
+
+    let mut top = main_pos.y;
+    left = clamp_position(
+        left,
+        work_left + gap,
+        work_right.saturating_sub(settings_w + gap),
+    );
+    top = clamp_position(
+        top,
+        work_top + gap,
+        work_bottom.saturating_sub(settings_h + gap),
+    );
+
+    Some((left as f64 / scale, top as f64 / scale))
+}
+
 pub(crate) fn reset_main_window_position(app: &AppHandle) {
     let Some(window) = app.get_webview_window("main") else {
         return;
@@ -227,7 +277,15 @@ fn reset_window_position(app: AppHandle) {
 
 #[tauri::command]
 fn set_window_on_top(app: AppHandle, window: WebviewWindow, enabled: bool) {
-    let _ = window.set_always_on_top(enabled);
+    if let Some(main) = app.get_webview_window("main") {
+        let _ = main.set_always_on_top(enabled);
+    } else {
+        let _ = window.set_always_on_top(enabled);
+    }
+
+    if let Some(settings) = app.get_webview_window("settings") {
+        let _ = settings.set_always_on_top(enabled);
+    }
 
     #[cfg(target_os = "windows")]
     tray::set_ontop_checked(&app, enabled);
@@ -262,6 +320,60 @@ fn set_theme(app: AppHandle, theme: String) {
 #[tauri::command]
 fn start_dragging(window: WebviewWindow) {
     let _ = window.start_dragging();
+}
+
+#[tauri::command]
+async fn show_settings_window(app: AppHandle) -> Result<(), String> {
+    if let Some(settings) = app.get_webview_window("settings") {
+        let _ = settings.show();
+        let _ = settings.set_focus();
+        return Ok(());
+    }
+
+    let main = app.get_webview_window("main");
+    let mut builder =
+        WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
+            .title("WorldClock Settings")
+            .inner_size(SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
+            .min_inner_size(390.0, 520.0)
+            .max_inner_size(520.0, 760.0)
+            .decorations(false)
+            .shadow(true)
+            .resizable(false)
+            .skip_taskbar(true)
+            .focused(true);
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        builder = builder.transparent(true);
+    }
+
+    let on_top = load_config_value(&app)
+        .and_then(|config| config.get("on_top").and_then(|v| v.as_bool()))
+        .unwrap_or(true);
+    builder = builder.always_on_top(on_top);
+
+    if let Some(main_window) = main.as_ref() {
+        if let Some((x, y)) = settings_window_position(main_window) {
+            builder = builder.position(x, y);
+        } else {
+            builder = builder.center();
+        }
+    } else {
+        builder = builder.center();
+    }
+
+    builder.build().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+#[tauri::command]
+fn close_settings_window(app: AppHandle, window: WebviewWindow) {
+    if window.label() == "settings" {
+        let _ = window.close();
+    } else if let Some(settings) = app.get_webview_window("settings") {
+        let _ = settings.close();
+    }
 }
 
 #[tauri::command]
@@ -459,7 +571,9 @@ async fn save_config(app: AppHandle, data: serde_json::Value) -> Result<(), Stri
     if let Some(window_state) = existing_window {
         next["window"] = window_state;
     }
-    write_config_value(&app, &next)
+    write_config_value(&app, &next)?;
+    let _ = app.emit("config-updated", next);
+    Ok(())
 }
 
 #[tauri::command]
@@ -582,6 +696,8 @@ pub fn run() {
             set_locked,
             set_theme,
             start_dragging,
+            show_settings_window,
+            close_settings_window,
             show_context_menu,
             set_hit_test_regions,
             set_autostart,

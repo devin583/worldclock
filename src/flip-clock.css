@@ -20,7 +20,8 @@
   --shadow: 0 8px 18px rgba(0,0,0,.35);
   --font: "Archivo", system-ui, sans-serif;
   --meta: rgba(255,255,255,.94);
-  --meta-bg: rgba(6,8,12,.62);
+  --meta-bg: rgba(6,8,12,.70);
+  --meta-border: rgba(255,255,255,.12);
   --meta-size: 17px; --meta-weight: 600; --meta-spacing: .14em;
 
   display: inline-flex;
@@ -45,7 +46,10 @@
   letter-spacing: var(--meta-spacing);
   color: var(--meta);
   white-space: nowrap;
-  text-shadow: 0 1px 4px rgba(0,0,0,.55);
+  text-shadow: none;
+  box-shadow: inset 0 0 0 1px var(--meta-border), 0 8px 20px rgba(0,0,0,.14);
+  -webkit-backdrop-filter: blur(10px) saturate(1.08);
+  backdrop-filter: blur(10px) saturate(1.08);
 }
 .fc-meta > span { white-space: nowrap; }
 .fc-meta .fc-dot { opacity: .45; font-weight: 400; }
@@ -140,8 +144,9 @@
   --digit: #f5f3ee; --seam: rgba(0,0,0,.52);
   --shadow: 0 8px 18px rgba(0,0,0,.35);
   --font: "Archivo", system-ui, sans-serif;
-  --meta: rgba(255,255,255,.88);
-  --meta-bg: rgba(6,8,12,.62);
+  --meta: rgba(255,255,255,.90);
+  --meta-bg: rgba(6,8,12,.70);
+  --meta-border: rgba(255,255,255,.12);
   --meta-size: 16px; --meta-weight: 600; --meta-spacing: .12em;
 }
 
@@ -153,8 +158,9 @@
   --digit: #232220; --seam: rgba(0,0,0,.06);
   --shadow: 0 8px 18px rgba(0,0,0,.22);
   --font: "Manrope", system-ui, sans-serif;
-  --meta: rgba(35,34,32,.82);
-  --meta-bg: rgba(255,250,242,.84);
+  --meta: rgba(35,34,32,.86);
+  --meta-bg: rgba(255,250,242,.92);
+  --meta-border: rgba(40,34,28,.10);
   --meta-size: 16px; --meta-weight: 600; --meta-spacing: .14em;
   gap: 26px;
 }
@@ -170,7 +176,8 @@
   --shadow: 0 8px 18px rgba(74,43,24,.24);
   --font: "Fredoka", system-ui, sans-serif;
   --meta: #4c2f20;
-  --meta-bg: rgba(255,247,238,.84);
+  --meta-bg: rgba(255,247,238,.92);
+  --meta-border: rgba(110,65,35,.12);
   --meta-size: 16px; --meta-weight: 500; --meta-spacing: .08em;
   gap: 16px;
 }
@@ -194,12 +201,13 @@
 .fc-glass {
   --w: 76px; --h: 108px; --fs: 86px; --r: 20px;
   --gap-d: 8px; --gap-g: 20px;
-  --card: rgba(30,32,40,.78); --card-hi: rgba(68,72,86,.84); --card-lo: rgba(16,18,24,.86);
+  --card: rgba(30,32,40,.88); --card-hi: rgba(68,72,86,.92); --card-lo: rgba(16,18,24,.92);
   --digit: #ffffff; --seam: rgba(0,0,0,.32);
-  --shadow: 0 10px 22px rgba(0,0,0,.42);
+  --shadow: 0 8px 18px rgba(0,0,0,.34);
   --font: "Manrope", system-ui, sans-serif;
-  --meta: rgba(255,255,255,.9);
-  --meta-bg: rgba(6,8,12,.62);
+  --meta: rgba(255,255,255,.92);
+  --meta-bg: rgba(6,8,12,.70);
+  --meta-border: rgba(255,255,255,.12);
   --meta-size: 16px; --meta-weight: 600; --meta-spacing: .12em;
 }
 .fc-glass .fc-leaf {

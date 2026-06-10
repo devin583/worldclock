@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorldClock Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+  <main class="settings-shell">
+    <header class="settings-titlebar" data-tauri-drag-region>
+      <div>
+        <p>WorldClock</p>
+        <h1>设置</h1>
+      </div>
+      <button id="btn-close" aria-label="关闭设置">×</button>
+    </header>
+
+    <section class="settings-content">
+      <div class="group">
+        <h2>显示</h2>
+        <label>时钟数量</label>
+        <div class="segmented">
+          <label><input type="radio" name="clock-count" value="1" /> 单时钟</label>
+          <label><input type="radio" name="clock-count" value="2" /> 双时钟</label>
+        </div>
+
+        <label>显示模式</label>
+        <div class="segmented">
+          <label><input type="radio" name="mode" value="digital" /> 数字</label>
+          <label><input type="radio" name="mode" value="analog" /> 指针</label>
+          <label><input type="radio" name="mode" value="both" /> 双显</label>
+        </div>
+      </div>
+
+      <div class="group">
+        <h2>时区</h2>
+        <label for="set-label-1">时钟 1 城市名</label>
+        <input type="text" id="set-label-1" autocomplete="off" />
+        <label for="set-tz-1">时钟 1 时区</label>
+        <input type="text" id="set-tz-1" list="timezone-options" autocomplete="off" />
+
+        <div id="clock-2-settings">
+          <label for="set-label-2">时钟 2 城市名</label>
+          <input type="text" id="set-label-2" autocomplete="off" />
+          <label for="set-tz-2">时钟 2 时区</label>
+          <input type="text" id="set-tz-2" list="timezone-options" autocomplete="off" />
+        </div>
+        <datalist id="timezone-options"></datalist>
+      </div>
+
+      <div class="group">
+        <h2>外观</h2>
+        <label>主题</label>
+        <div class="grid-options">
+          <label><input type="radio" name="theme" value="classic" /> Classic</label>
+          <label><input type="radio" name="theme" value="minimal" /> Minimal</label>
+          <label><input type="radio" name="theme" value="cute" /> Cute</label>
+          <label><input type="radio" name="theme" value="glass" /> Glass</label>
+        </div>
+
+        <label>背景样式</label>
+        <div class="segmented">
+          <label><input type="radio" name="surface-style" value="transparent" /> 透明物件</label>
+          <label><input type="radio" name="surface-style" value="solid" /> 带底板</label>
+        </div>
+
+        <label for="set-opacity">底板透明度</label>
+        <input type="range" id="set-opacity" min="0.72" max="1" step="0.04" />
+      </div>
+
+      <div class="group">
+        <h2>交互</h2>
+        <label>时间格式</label>
+        <div class="segmented">
+          <label><input type="radio" name="time-format" value="24" /> 24h</label>
+          <label><input type="radio" name="time-format" value="12" /> 12h</label>
+        </div>
+
+        <label class="toggle-row">
+          <input type="checkbox" id="set-locked" />
+          <span>锁定位置，只防止拖动</span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="set-ontop" />
+          <span>始终置顶</span>
+        </label>
+        <label class="toggle-row">
+          <input type="checkbox" id="set-autostart" />
+          <span>开机自启</span>
+        </label>
+      </div>
+
+      <div class="group">
+        <h2>番茄钟</h2>
+        <div class="split-inputs">
+          <label>专注 <input type="number" id="set-focus-minutes" min="1" max="120" /></label>
+          <label>休息 <input type="number" id="set-break-minutes" min="1" max="60" /></label>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <span id="status-text" aria-live="polite"></span>
+      <div>
+        <button id="btn-cancel">取消</button>
+        <button id="btn-apply">应用</button>
+      </div>
+    </footer>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>
