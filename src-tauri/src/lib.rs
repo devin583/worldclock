@@ -38,7 +38,10 @@ struct HitTestRegion {
 struct ContextMenuState {
     locked: bool,
     on_top: bool,
+    clock_count: u8,
     mode: String,
+    theme: String,
+    surface_style: String,
     time_format: String,
     pomodoro_running: bool,
     pomodoro_idle: bool,
@@ -399,6 +402,27 @@ fn show_context_menu(
     } else {
         "切换 24 小时制"
     };
+    let count_single = CheckMenuItem::with_id(
+        &app,
+        "context_count_single",
+        "单时钟",
+        true,
+        state.clock_count == 1,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let count_dual = CheckMenuItem::with_id(
+        &app,
+        "context_count_dual",
+        "双时钟",
+        true,
+        state.clock_count != 1,
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let count_menu = Submenu::with_items(&app, "时钟数量", true, &[&count_single, &count_dual])
+        .map_err(|e| e.to_string())?;
+
     let mode_digital = CheckMenuItem::with_id(
         &app,
         "context_mode_digital",
@@ -431,6 +455,74 @@ fn show_context_menu(
         "显示模式",
         true,
         &[&mode_digital, &mode_analog, &mode_both],
+    )
+    .map_err(|e| e.to_string())?;
+    let theme_classic = CheckMenuItem::with_id(
+        &app,
+        "context_theme_classic",
+        "Classic 经典黑",
+        true,
+        state.theme == "classic",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let theme_minimal = CheckMenuItem::with_id(
+        &app,
+        "context_theme_minimal",
+        "Minimal 浅色",
+        true,
+        state.theme == "minimal",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let theme_cute = CheckMenuItem::with_id(
+        &app,
+        "context_theme_cute",
+        "Cute 暖色",
+        true,
+        state.theme == "cute",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let theme_glass = CheckMenuItem::with_id(
+        &app,
+        "context_theme_glass",
+        "Glass 玻璃",
+        true,
+        state.theme == "glass",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let theme_menu = Submenu::with_items(
+        &app,
+        "外观主题",
+        true,
+        &[&theme_classic, &theme_minimal, &theme_cute, &theme_glass],
+    )
+    .map_err(|e| e.to_string())?;
+    let surface_transparent = CheckMenuItem::with_id(
+        &app,
+        "context_surface_transparent",
+        "透明物件",
+        true,
+        state.surface_style == "transparent",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let surface_solid = CheckMenuItem::with_id(
+        &app,
+        "context_surface_solid",
+        "带底板",
+        true,
+        state.surface_style == "solid",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let surface_menu = Submenu::with_items(
+        &app,
+        "背景样式",
+        true,
+        &[&surface_transparent, &surface_solid],
     )
     .map_err(|e| e.to_string())?;
 
@@ -510,7 +602,10 @@ fn show_context_menu(
     let menu = Menu::with_items(
         &app,
         &[
+            &count_menu,
             &mode_menu,
+            &theme_menu,
+            &surface_menu,
             &sep1,
             &pomodoro,
             &reset_pomodoro,
@@ -685,9 +780,17 @@ pub fn run() {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "context_toggle_pomodoro" => emit_context_action(app, "toggle-pomodoro"),
             "context_reset_pomodoro" => emit_context_action(app, "reset-pomodoro"),
+            "context_count_single" => emit_context_action(app, "set-count-single"),
+            "context_count_dual" => emit_context_action(app, "set-count-dual"),
             "context_mode_digital" => emit_context_action(app, "set-mode-digital"),
             "context_mode_analog" => emit_context_action(app, "set-mode-analog"),
             "context_mode_both" => emit_context_action(app, "set-mode-both"),
+            "context_theme_classic" => emit_context_action(app, "set-theme-classic"),
+            "context_theme_minimal" => emit_context_action(app, "set-theme-minimal"),
+            "context_theme_cute" => emit_context_action(app, "set-theme-cute"),
+            "context_theme_glass" => emit_context_action(app, "set-theme-glass"),
+            "context_surface_transparent" => emit_context_action(app, "set-surface-transparent"),
+            "context_surface_solid" => emit_context_action(app, "set-surface-solid"),
             "context_toggle_time_format" => emit_context_action(app, "toggle-time-format"),
             "context_toggle_lock" => emit_context_action(app, "toggle-lock"),
             "context_toggle_ontop" => emit_context_action(app, "toggle-ontop"),
