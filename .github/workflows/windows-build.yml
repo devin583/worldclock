@@ -42,6 +42,9 @@ jobs:
       - name: Audit desktop interaction
         run: npm run audit:interaction
 
+      - name: Audit desktop icons
+        run: npm run audit:icons
+
       - name: Build Tauri Windows app
         run: npx tauri build --no-bundle
 

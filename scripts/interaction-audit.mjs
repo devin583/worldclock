@@ -30,6 +30,18 @@ const checks = [
     name: 'unanchored native popup_menu is not used for the body context menu',
     ok: !files.lib.includes('window.popup_menu(&menu)'),
   },
+  {
+    name: 'frontend sends Windows hit-test regions to native code',
+    ok: files.main.includes("invoke('set_hit_test_regions', { regions: collectHitRegions() })"),
+  },
+  {
+    name: 'Windows native code applies real window regions',
+    ok: files.lib.includes('SetWindowRgn') && files.lib.includes('CreateRoundRectRgn'),
+  },
+  {
+    name: 'transparent mode uses visible clock objects instead of one rectangular webview',
+    ok: /if \(isSolid[\s\S]*pushRegion\(regions, clockRect[\s\S]*else \{[\s\S]*collectClockObjectRegions\(regions, scale\)/.test(files.main),
+  },
 ];
 
 const failures = [];

@@ -1,11 +1,13 @@
 {
   "name": "worldclock",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "private": true,
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
     "tauri": "tauri",
+    "generate:icons": "node scripts/generate-icons.mjs",
+    "audit:icons": "node scripts/icon-audit.mjs",
     "audit:contrast": "node scripts/contrast-audit.mjs",
     "audit:interaction": "node scripts/interaction-audit.mjs"
   },
