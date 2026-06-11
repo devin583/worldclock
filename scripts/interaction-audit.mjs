@@ -6,6 +6,8 @@ const files = {
   tauri: fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
 };
 
+const hasRust = (pattern) => pattern.test(files.lib);
+
 const checks = [
   {
     name: 'right click is bound on the clock body',
@@ -58,6 +60,19 @@ const checks = [
   {
     name: 'startup has a fallback reveal if frontend readiness fails',
     ok: files.lib.includes('frontend ready timeout; showing main window fallback'),
+  },
+  {
+    name: 'native context menu stores the right-click point for settings placement',
+    ok: hasRust(/set_context_settings_anchor\(\s*&app,\s*context_menu_anchor\(&window,\s*anchor_x,\s*anchor_y\)\s*\)/),
+  },
+  {
+    name: 'settings opened from native context menu uses the stored click anchor',
+    ok: files.lib.includes('let anchor = take_context_settings_anchor(app);')
+      && files.lib.includes('settings_window_position(main_window, anchor)'),
+  },
+  {
+    name: 'context menu opens settings natively instead of bouncing through the webview',
+    ok: hasRust(/"context_open_settings"\s*=>\s*\{\s*let _ = open_settings_window\(app\);\s*\}/),
   },
 ];
 
