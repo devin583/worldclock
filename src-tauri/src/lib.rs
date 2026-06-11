@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc,
+        Arc, Mutex,
     },
     thread,
     time::Duration,
@@ -33,6 +33,9 @@ const MAIN_READY_FALLBACK_MS: u64 = 5_000;
 
 #[derive(Clone, Default)]
 struct MainWindowReadyState(Arc<AtomicBool>);
+
+#[derive(Default)]
+struct ContextMenuAnchorState(Mutex<Option<(f64, f64)>>);
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
@@ -149,7 +152,36 @@ fn clamp_position(value: i32, min: i32, max: i32) -> i32 {
     }
 }
 
-fn settings_window_position(window: &WebviewWindow) -> Option<(f64, f64)> {
+fn context_menu_anchor(window: &WebviewWindow, x: f64, y: f64) -> Option<(f64, f64)> {
+    let main_pos = window.outer_position().ok()?;
+    let monitor = window.current_monitor().ok().flatten()?;
+    let scale = monitor.scale_factor().max(1.0);
+
+    Some((main_pos.x as f64 / scale + x, main_pos.y as f64 / scale + y))
+}
+
+fn set_context_settings_anchor(app: &AppHandle, anchor: Option<(f64, f64)>) {
+    if let Some(state) = app.try_state::<ContextMenuAnchorState>() {
+        if let Ok(mut stored) = state.0.lock() {
+            *stored = anchor;
+        }
+    }
+}
+
+fn take_context_settings_anchor(app: &AppHandle) -> Option<(f64, f64)> {
+    let state = app.try_state::<ContextMenuAnchorState>()?;
+    let anchor = state.0.lock().ok()?.take();
+    anchor
+}
+
+fn clear_context_settings_anchor(app: &AppHandle) {
+    set_context_settings_anchor(app, None);
+}
+
+fn settings_window_position(
+    window: &WebviewWindow,
+    anchor: Option<(f64, f64)>,
+) -> Option<(f64, f64)> {
     let main_pos = window.outer_position().ok()?;
     let main_size = window.outer_size().ok()?;
     let monitor = window.current_monitor().ok().flatten()?;
@@ -165,16 +197,33 @@ fn settings_window_position(window: &WebviewWindow) -> Option<(f64, f64)> {
     let work_top = work_pos.y;
     let work_right = work_left.saturating_add(work_size.width as i32);
     let work_bottom = work_top.saturating_add(work_size.height as i32);
+    let mut left;
+    let mut top;
 
-    let mut left = main_pos
-        .x
-        .saturating_add(main_size.width as i32)
-        .saturating_add(gap);
-    if left.saturating_add(settings_w) > work_right {
-        left = main_pos.x.saturating_sub(settings_w).saturating_sub(gap);
+    if let Some((anchor_x, anchor_y)) = anchor {
+        let anchor_x = (anchor_x * scale).round() as i32;
+        let anchor_y = (anchor_y * scale).round() as i32;
+        left = anchor_x.saturating_add(gap);
+        top = anchor_y.saturating_add(gap);
+
+        if left.saturating_add(settings_w) > work_right {
+            left = anchor_x.saturating_sub(settings_w).saturating_sub(gap);
+        }
+        if top.saturating_add(settings_h) > work_bottom {
+            top = anchor_y.saturating_sub(settings_h).saturating_sub(gap);
+        }
+    } else {
+        left = main_pos
+            .x
+            .saturating_add(main_size.width as i32)
+            .saturating_add(gap);
+        top = main_pos.y;
+
+        if left.saturating_add(settings_w) > work_right {
+            left = main_pos.x.saturating_sub(settings_w).saturating_sub(gap);
+        }
     }
 
-    let mut top = main_pos.y;
     left = clamp_position(
         left,
         work_left + gap,
@@ -404,7 +453,8 @@ pub(crate) fn open_settings_window(app: &AppHandle) -> Result<(), String> {
     builder = builder.always_on_top(on_top);
 
     if let Some(main_window) = main.as_ref() {
-        if let Some((x, y)) = settings_window_position(main_window) {
+        let anchor = take_context_settings_anchor(app);
+        if let Some((x, y)) = settings_window_position(main_window, anchor) {
             builder = builder.position(x, y);
         } else {
             builder = builder.center();
@@ -441,6 +491,7 @@ fn show_context_menu(
 ) -> Result<(), String> {
     let anchor_x = if x.is_finite() { x.max(0.0) } else { 0.0 };
     let anchor_y = if y.is_finite() { y.max(0.0) } else { 0.0 };
+    set_context_settings_anchor(&app, context_menu_anchor(&window, anchor_x, anchor_y));
 
     let pomodoro_label = if state.pomodoro_running {
         "暂停番茄钟"
@@ -737,7 +788,9 @@ fn apply_hit_test_regions(window: &WebviewWindow, regions: &[HitTestRegion]) -> 
         let max_diameter = region.width.min(region.height).max(0);
         let corner_diameter = radius.saturating_mul(2).min(max_diameter);
         let next = if corner_diameter > 0 {
-            unsafe { CreateRoundRectRgn(left, top, right, bottom, corner_diameter, corner_diameter) }
+            unsafe {
+                CreateRoundRectRgn(left, top, right, bottom, corner_diameter, corner_diameter)
+            }
         } else {
             unsafe { CreateRectRgn(left, top, right, bottom) }
         };
@@ -827,6 +880,7 @@ fn set_autostart_enabled(_enabled: bool) -> Result<(), String> {
 }
 
 fn emit_context_action(app: &AppHandle, action: &str) {
+    clear_context_settings_anchor(app);
     let _ = app.emit("context-menu-action", action);
 }
 
@@ -856,20 +910,30 @@ pub fn run() {
             "context_toggle_time_format" => emit_context_action(app, "toggle-time-format"),
             "context_toggle_lock" => emit_context_action(app, "toggle-lock"),
             "context_toggle_ontop" => emit_context_action(app, "toggle-ontop"),
-            "context_open_settings" => emit_context_action(app, "open-settings"),
-            "context_reset_window" => reset_main_window_position(app),
+            "context_open_settings" => {
+                let _ = open_settings_window(app);
+            }
+            "context_reset_window" => {
+                clear_context_settings_anchor(app);
+                reset_main_window_position(app);
+            }
             "context_hide_window" => {
+                clear_context_settings_anchor(app);
                 if let Some(window) = app.get_webview_window("main") {
                     let _ = window.hide();
                 }
             }
-            "context_quit" => app.exit(0),
+            "context_quit" => {
+                clear_context_settings_anchor(app);
+                app.exit(0);
+            }
             _ => {}
         })
         .setup(|_app| {
             log_startup("setup() entered");
             let main_ready = MainWindowReadyState::default();
             _app.manage(main_ready.clone());
+            _app.manage(ContextMenuAnchorState::default());
 
             #[cfg(target_os = "windows")]
             if let Err(err) = tray::setup_tray(_app.handle()) {

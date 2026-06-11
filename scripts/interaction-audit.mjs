@@ -59,6 +59,19 @@ const checks = [
     name: 'startup has a fallback reveal if frontend readiness fails',
     ok: files.lib.includes('frontend ready timeout; showing main window fallback'),
   },
+  {
+    name: 'native context menu stores the right-click point for settings placement',
+    ok: files.lib.includes('set_context_settings_anchor(&app, context_menu_anchor(&window, anchor_x, anchor_y))'),
+  },
+  {
+    name: 'settings opened from native context menu uses the stored click anchor',
+    ok: files.lib.includes('let anchor = take_context_settings_anchor(app);')
+      && files.lib.includes('settings_window_position(main_window, anchor)'),
+  },
+  {
+    name: 'context menu opens settings natively instead of bouncing through the webview',
+    ok: files.lib.includes('"context_open_settings" => {\n                let _ = open_settings_window(app);\n            }'),
+  },
 ];
 
 const failures = [];
