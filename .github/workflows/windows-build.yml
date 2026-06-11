@@ -32,6 +32,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Audit visual contrast
+        run: npm run audit:contrast
+
       - name: Build Tauri Windows app
         run: npx tauri build --no-bundle
 
