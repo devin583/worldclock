@@ -6,6 +6,12 @@ use std::{
     fs::{self, OpenOptions},
     io::Write,
     path::PathBuf,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
+    thread,
+    time::Duration,
 };
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
@@ -23,6 +29,10 @@ const SETTINGS_WINDOW_WIDTH: f64 = 430.0;
 const SETTINGS_WINDOW_HEIGHT: f64 = 640.0;
 const MIN_VISIBLE_WIDTH: i32 = 80;
 const MIN_VISIBLE_HEIGHT: i32 = 80;
+const MAIN_READY_FALLBACK_MS: u64 = 5_000;
+
+#[derive(Clone, Default)]
+struct MainWindowReadyState(Arc<AtomicBool>);
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
@@ -262,6 +272,36 @@ fn save_window_state(app: &AppHandle, window: &WebviewWindow) {
     }
 }
 
+fn reveal_main_window(window: &WebviewWindow, focus: bool) {
+    let _ = window.show();
+    if focus {
+        let _ = window.set_focus();
+    }
+}
+
+fn mark_main_window_ready(app: &AppHandle) {
+    if let Some(state) = app.try_state::<MainWindowReadyState>() {
+        state.0.store(true, Ordering::SeqCst);
+    }
+}
+
+fn schedule_main_ready_fallback(app: AppHandle, ready_state: MainWindowReadyState) {
+    thread::spawn(move || {
+        thread::sleep(Duration::from_millis(MAIN_READY_FALLBACK_MS));
+        if ready_state.0.load(Ordering::SeqCst) {
+            return;
+        }
+
+        log_startup("frontend ready timeout; showing main window fallback");
+        let app_for_main = app.clone();
+        let _ = app.run_on_main_thread(move || {
+            if let Some(window) = app_for_main.get_webview_window("main") {
+                reveal_main_window(&window, true);
+            }
+        });
+    });
+}
+
 #[cfg(target_os = "windows")]
 fn apply_premium_window_effect(window: &WebviewWindow, theme: &str) {
     let _ = (window, theme);
@@ -324,6 +364,13 @@ fn set_theme(app: AppHandle, theme: String) {
 #[tauri::command]
 fn start_dragging(window: WebviewWindow) {
     let _ = window.start_dragging();
+}
+
+#[tauri::command]
+fn main_window_ready(app: AppHandle, window: WebviewWindow) {
+    mark_main_window_ready(&app);
+    reveal_main_window(&window, true);
+    log_startup("frontend ready; main window shown");
 }
 
 pub(crate) fn open_settings_window(app: &AppHandle) -> Result<(), String> {
@@ -821,6 +868,8 @@ pub fn run() {
         })
         .setup(|_app| {
             log_startup("setup() entered");
+            let main_ready = MainWindowReadyState::default();
+            _app.manage(main_ready.clone());
 
             #[cfg(target_os = "windows")]
             if let Err(err) = tray::setup_tray(_app.handle()) {
@@ -843,9 +892,8 @@ pub fn run() {
                 });
 
                 restore_window_state(_app.handle(), &window);
-                let _ = window.show();
-                let _ = window.set_focus();
-                log_startup("main window show/focus requested");
+                schedule_main_ready_fallback(_app.handle().clone(), main_ready);
+                log_startup("main window restored; waiting for frontend ready");
             } else {
                 log_startup("main window not found in setup");
             }
@@ -859,6 +907,7 @@ pub fn run() {
             set_locked,
             set_theme,
             start_dragging,
+            main_window_ready,
             show_settings_window,
             close_settings_window,
             show_context_menu,

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const files = {
   main: fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'),
   lib: fs.readFileSync(new URL('../src-tauri/src/lib.rs', import.meta.url), 'utf8'),
+  tauri: fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
 };
 
 const checks = [
@@ -41,6 +42,22 @@ const checks = [
   {
     name: 'transparent mode uses visible clock objects instead of one rectangular webview',
     ok: /if \(isSolid[\s\S]*pushRegion\(regions, clockRect[\s\S]*else \{[\s\S]*collectClockObjectRegions\(regions, scale\)/.test(files.main),
+  },
+  {
+    name: 'main window starts hidden until frontend hit regions are ready',
+    ok: files.tauri.includes('"visible": false'),
+  },
+  {
+    name: 'frontend applies hit regions before showing the main window',
+    ok: /await applyHitRegionsNow\(\);[\s\S]*await notifyMainWindowReady\(\);/.test(files.main),
+  },
+  {
+    name: 'Rust exposes a frontend-ready command to reveal the main window',
+    ok: files.lib.includes('fn main_window_ready') && files.lib.includes('main_window_ready,'),
+  },
+  {
+    name: 'startup has a fallback reveal if frontend readiness fails',
+    ok: files.lib.includes('frontend ready timeout; showing main window fallback'),
   },
 ];
 
