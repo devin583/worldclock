@@ -712,23 +712,79 @@ function isHitRegionVisible(el) {
   return r.width > 2 && r.height > 2;
 }
 
+function cssPx(value, fallback = 0) {
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function elementRegionRadius(el, rect, pad = 0) {
+  if (el.classList.contains('analog')) {
+    return Math.max(rect.width, rect.height) / 2 + pad;
+  }
+
+  const s = window.getComputedStyle(el);
+  const radius = Math.max(
+    cssPx(s.borderTopLeftRadius),
+    cssPx(s.borderTopRightRadius),
+    cssPx(s.borderBottomRightRadius),
+    cssPx(s.borderBottomLeftRadius),
+    8
+  );
+  return radius + pad;
+}
+
+function pushRegion(regions, rect, scale, pad, radius) {
+  regions.push({
+    x: Math.round((rect.left - pad) * scale),
+    y: Math.round((rect.top - pad) * scale),
+    width: Math.round((rect.width + pad * 2) * scale),
+    height: Math.round((rect.height + pad * 2) * scale),
+    radius: Math.round(radius * scale),
+  });
+}
+
+function pushElementRegion(regions, el, scale, pad = 3) {
+  if (!isHitRegionVisible(el)) return;
+  const rect = el.getBoundingClientRect();
+  pushRegion(regions, rect, scale, pad, elementRegionRadius(el, rect, pad));
+}
+
+function collectClockObjectRegions(regions, scale) {
+  const selectors = [
+    '.fc-digit',
+    '.fc-meta',
+    '.fc-ampm',
+    '.analog',
+    '.dl-read',
+    '.zone-meta',
+    '.wp-pill',
+    '#pomodoro-status:not(.hidden)',
+  ];
+
+  const seen = new Set();
+  document.querySelectorAll(selectors.join(',')).forEach(el => {
+    if (seen.has(el)) return;
+    seen.add(el);
+    pushElementRegion(regions, el, scale, el.classList.contains('analog') ? 6 : 4);
+  });
+}
+
 function collectHitRegions() {
   const scale = window.devicePixelRatio || 1;
   const isSolid = body.classList.contains('surface-solid');
 
   const regions = [];
 
-  // clock content area
+  // In solid mode the visible object is the whole backing plate. In transparent
+  // mode, keep desktop-pet behavior: only visible clock parts receive hits.
   const clockRect = mainEl.getBoundingClientRect();
-  if (clockRect.width > 2 && clockRect.height > 2) {
-    const pad = isSolid ? 20 : 8;
-    regions.push({
-      x: Math.round((clockRect.left - pad) * scale),
-      y: Math.round((clockRect.top - pad) * scale),
-      width: Math.round((clockRect.width + pad * 2) * scale),
-      height: Math.round((clockRect.height + pad * 2) * scale),
-      radius: Math.round(14 * scale),
-    });
+  if (isSolid && clockRect.width > 2 && clockRect.height > 2) {
+    pushRegion(regions, clockRect, scale, 28, 28);
+  } else {
+    collectClockObjectRegions(regions, scale);
+    if (!regions.length && clockRect.width > 2 && clockRect.height > 2) {
+      pushRegion(regions, clockRect, scale, 8, 14);
+    }
   }
 
   // control surfaces

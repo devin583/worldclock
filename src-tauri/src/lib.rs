@@ -674,8 +674,10 @@ fn apply_hit_test_regions(window: &WebviewWindow, regions: &[HitTestRegion]) -> 
         let right = region.x.saturating_add(region.width);
         let bottom = region.y.saturating_add(region.height);
         let radius = region.radius.max(0);
-        let next = if radius > 0 {
-            unsafe { CreateRoundRectRgn(left, top, right, bottom, radius, radius) }
+        let max_diameter = region.width.min(region.height).max(0);
+        let corner_diameter = radius.saturating_mul(2).min(max_diameter);
+        let next = if corner_diameter > 0 {
+            unsafe { CreateRoundRectRgn(left, top, right, bottom, corner_diameter, corner_diameter) }
         } else {
             unsafe { CreateRectRgn(left, top, right, bottom) }
         };
