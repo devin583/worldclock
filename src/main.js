@@ -474,7 +474,10 @@ function getContextMenuState() {
   return {
     locked: config.locked,
     on_top: config.on_top,
+    clock_count: config.clockCount,
     mode: config.mode,
+    theme: config.theme,
+    surface_style: config.surfaceStyle,
     time_format: config.timeFormat,
     pomodoro_running: pomodoroState.running,
     pomodoro_idle: pomodoroState.phase === 'idle',
@@ -667,9 +670,17 @@ async function handleContextMenuAction(action, anchor) {
   if (!action) return;
   if (action === 'toggle-pomodoro') togglePomodoro();
   if (action === 'reset-pomodoro') resetPomodoro();
+  if (action === 'set-count-single') applyClockCount(1);
+  if (action === 'set-count-dual') applyClockCount(2);
   if (action === 'set-mode-digital') applyMode('digital');
   if (action === 'set-mode-analog') applyMode('analog');
   if (action === 'set-mode-both') applyMode('both');
+  if (action === 'set-theme-classic') applyTheme('classic');
+  if (action === 'set-theme-minimal') applyTheme('minimal');
+  if (action === 'set-theme-cute') applyTheme('cute');
+  if (action === 'set-theme-glass') applyTheme('glass');
+  if (action === 'set-surface-transparent') applySurfaceStyle('transparent');
+  if (action === 'set-surface-solid') applySurfaceStyle('solid');
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
