@@ -7,11 +7,11 @@
   gap: 7px;
   font-family: "Manrope", system-ui, sans-serif;
   --zm-fg: #f4f2ec;
-  --zm-sub: rgba(255,255,255,.88);
-  --zm-chip: rgba(255,255,255,.20);
-  --zm-chip-fg: rgba(255,255,255,.94);
+  --zm-sub: rgba(255,255,255,.90);
+  --zm-chip: rgba(255,255,255,.24);
+  --zm-chip-fg: rgba(255,255,255,.95);
   --zm-accent: #e7894c;
-  --zm-halo: rgba(6,8,12,.78);
+  --zm-halo: rgba(6,8,12,.84);
   --zm-border: rgba(255,255,255,.16);
   --zm-shadow: 0 8px 20px rgba(0,0,0,.18);
   position: relative;
@@ -33,9 +33,9 @@
 }
 .zone-meta.zm-light {
   --zm-fg: #2a2620;
-  --zm-sub: rgba(45,39,32,.86);
-  --zm-chip: rgba(40,34,28,.14);
-  --zm-chip-fg: rgba(45,39,32,.94);
+  --zm-sub: rgba(45,39,32,.88);
+  --zm-chip: rgba(40,34,28,.16);
+  --zm-chip-fg: rgba(45,39,32,.95);
   --zm-accent: #9f5125;
   --zm-halo: rgba(255,250,242,.98);
   --zm-border: rgba(40,34,28,.18);
@@ -77,7 +77,7 @@
 .world-pair {
   display: inline-flex;
   --wp-line: rgba(6,8,12,.34);
-  --wp-pill-bg: rgba(6,8,12,.78);
+  --wp-pill-bg: rgba(6,8,12,.84);
   --wp-pill-fg: #f4f2ec;
   --wp-pill-border: rgba(255,255,255,.16);
   --wp-pill-shadow: 0 6px 16px rgba(0,0,0,.18);

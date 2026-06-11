@@ -13,10 +13,10 @@
 
 .analog {
   --size: 240px;
-  --face: rgba(28,30,38,.88);
-  --face-edge: rgba(255,255,255,.08);
-  --ring: rgba(255,255,255,.18);
-  --tick: rgba(255,255,255,.34);
+  --face: rgba(24,26,34,.94);
+  --face-edge: rgba(255,255,255,.12);
+  --ring: rgba(255,255,255,.22);
+  --tick: rgba(255,255,255,.40);
   --tick-h: rgba(255,255,255,.92);
   --hand: #f4f2ec;
   --accent: #e7894c;
@@ -127,10 +127,10 @@
 
 /* ── color schemes ──────────────────────────────────────────── */
 .ac-dark {
-  --face: rgba(28,30,38,.94);
-  --face-edge: rgba(255,255,255,.10);
-  --ring: rgba(255,255,255,.18);
-  --tick: rgba(255,255,255,.34);
+  --face: rgba(24,26,34,.96);
+  --face-edge: rgba(255,255,255,.12);
+  --ring: rgba(255,255,255,.22);
+  --tick: rgba(255,255,255,.40);
   --tick-h: rgba(255,255,255,.94);
   --hand: #f4f2ec;
   --num: rgba(255,255,255,.96);
@@ -141,7 +141,7 @@
   --face: rgba(247,245,241,.98);
   --face-edge: rgba(40,34,28,.18);
   --ring: rgba(40,34,28,.24);
-  --tick: rgba(40,34,28,.46);
+  --tick: rgba(40,34,28,.54);
   --tick-h: rgba(40,34,28,.92);
   --hand: #2a2620;
   --num: rgba(40,34,28,.96);
@@ -150,9 +150,9 @@
 }
 .dl-dark {
   --num: #f4f2ec;
-  --sub: rgba(255,255,255,.84);
+  --sub: rgba(255,255,255,.88);
   --accent: #e7894c;
-  --read-bg: rgba(6,8,12,.78);
+  --read-bg: rgba(6,8,12,.84);
   --read-border: rgba(255,255,255,.16);
   --read-shadow: 0 8px 20px rgba(0,0,0,.18);
 }
