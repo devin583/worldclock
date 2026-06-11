@@ -512,6 +512,15 @@ async function openNativeSettingsWindow() {
   }
 }
 
+async function notifyMainWindowReady() {
+  if (!isTauri) return;
+  try {
+    await tauriInvoke('main_window_ready');
+  } catch (e) {
+    console.warn('[main window ready]', e);
+  }
+}
+
 // Returns screen bounds in viewport-relative CSS px; null if unavailable.
 async function getDisplayBounds() {
   if (!isTauri) return null;
@@ -811,10 +820,18 @@ function collectHitRegions() {
   return regions;
 }
 
-function updateHitRegions() {
+async function applyHitRegionsNow() {
   hitRegionFrame = 0;
   if (!isTauri) return;
-  invoke('set_hit_test_regions', { regions: collectHitRegions() });
+  try {
+    await invoke('set_hit_test_regions', { regions: collectHitRegions() });
+  } catch (e) {
+    console.warn('[hit regions]', e);
+  }
+}
+
+function updateHitRegions() {
+  applyHitRegionsNow();
 }
 function scheduleHitRegionUpdate() {
   if (hitRegionFrame) return;
@@ -862,7 +879,8 @@ async function init() {
 
     buildClocks();
     startClock();
-    scheduleHitRegionUpdate();
+    await applyHitRegionsNow();
+    await notifyMainWindowReady();
     window.setTimeout(scheduleHitRegionUpdate, 400);
   } catch (e) {
     console.error('init failed', e);
