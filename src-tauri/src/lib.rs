@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 use tauri::{
-    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
+    menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
@@ -38,6 +38,7 @@ struct HitTestRegion {
 struct ContextMenuState {
     locked: bool,
     on_top: bool,
+    mode: String,
     time_format: String,
     pomodoro_running: bool,
     pomodoro_idle: bool,
@@ -322,8 +323,7 @@ fn start_dragging(window: WebviewWindow) {
     let _ = window.start_dragging();
 }
 
-#[tauri::command]
-async fn show_settings_window(app: AppHandle) -> Result<(), String> {
+pub(crate) fn open_settings_window(app: &AppHandle) -> Result<(), String> {
     if let Some(settings) = app.get_webview_window("settings") {
         let _ = settings.show();
         let _ = settings.set_focus();
@@ -332,7 +332,7 @@ async fn show_settings_window(app: AppHandle) -> Result<(), String> {
 
     let main = app.get_webview_window("main");
     let mut builder =
-        WebviewWindowBuilder::new(&app, "settings", WebviewUrl::App("settings.html".into()))
+        WebviewWindowBuilder::new(app, "settings", WebviewUrl::App("settings.html".into()))
             .title("WorldClock Settings")
             .inner_size(SETTINGS_WINDOW_WIDTH, SETTINGS_WINDOW_HEIGHT)
             .min_inner_size(390.0, 520.0)
@@ -368,6 +368,11 @@ async fn show_settings_window(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn show_settings_window(app: AppHandle) -> Result<(), String> {
+    open_settings_window(&app)
+}
+
+#[tauri::command]
 fn close_settings_window(app: AppHandle, window: WebviewWindow) {
     if window.label() == "settings" {
         let _ = window.close();
@@ -394,6 +399,40 @@ fn show_context_menu(
     } else {
         "切换 24 小时制"
     };
+    let mode_digital = CheckMenuItem::with_id(
+        &app,
+        "context_mode_digital",
+        "数字",
+        true,
+        state.mode == "digital",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let mode_analog = CheckMenuItem::with_id(
+        &app,
+        "context_mode_analog",
+        "指针",
+        true,
+        state.mode == "analog",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let mode_both = CheckMenuItem::with_id(
+        &app,
+        "context_mode_both",
+        "双显",
+        true,
+        state.mode == "both",
+        None::<&str>,
+    )
+    .map_err(|e| e.to_string())?;
+    let mode_menu = Submenu::with_items(
+        &app,
+        "显示模式",
+        true,
+        &[&mode_digital, &mode_analog, &mode_both],
+    )
+    .map_err(|e| e.to_string())?;
 
     let pomodoro = MenuItem::with_id(
         &app,
@@ -464,23 +503,26 @@ fn show_context_menu(
     )
     .map_err(|e| e.to_string())?;
     let sep3 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
+    let sep4 = PredefinedMenuItem::separator(&app).map_err(|e| e.to_string())?;
     let quit = MenuItem::with_id(&app, "context_quit", "退出 WorldClock", true, None::<&str>)
         .map_err(|e| e.to_string())?;
 
     let menu = Menu::with_items(
         &app,
         &[
+            &mode_menu,
+            &sep1,
             &pomodoro,
             &reset_pomodoro,
-            &sep1,
+            &sep2,
             &time_format,
             &lock,
             &ontop,
-            &sep2,
+            &sep3,
             &settings,
             &reset_window,
             &hide,
-            &sep3,
+            &sep4,
             &quit,
         ],
     )
@@ -643,6 +685,9 @@ pub fn run() {
         .on_menu_event(|app, event| match event.id().as_ref() {
             "context_toggle_pomodoro" => emit_context_action(app, "toggle-pomodoro"),
             "context_reset_pomodoro" => emit_context_action(app, "reset-pomodoro"),
+            "context_mode_digital" => emit_context_action(app, "set-mode-digital"),
+            "context_mode_analog" => emit_context_action(app, "set-mode-analog"),
+            "context_mode_both" => emit_context_action(app, "set-mode-both"),
             "context_toggle_time_format" => emit_context_action(app, "toggle-time-format"),
             "context_toggle_lock" => emit_context_action(app, "toggle-lock"),
             "context_toggle_ontop" => emit_context_action(app, "toggle-ontop"),
