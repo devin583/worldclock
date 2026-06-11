@@ -1,11 +1,12 @@
 {
   "name": "worldclock",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "private": true,
   "scripts": {
     "dev": "tauri dev",
     "build": "tauri build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "audit:contrast": "node scripts/contrast-audit.mjs"
   },
   "dependencies": {},
   "devDependencies": {

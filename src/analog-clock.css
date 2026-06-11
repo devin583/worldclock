@@ -14,8 +14,9 @@
 .analog {
   --size: 240px;
   --face: rgba(28,30,38,.88);
-  --ring: rgba(255,255,255,.20);
-  --tick: rgba(255,255,255,.40);
+  --face-edge: rgba(255,255,255,.08);
+  --ring: rgba(255,255,255,.18);
+  --tick: rgba(255,255,255,.34);
   --tick-h: rgba(255,255,255,.92);
   --hand: #f4f2ec;
   --accent: #e7894c;
@@ -26,10 +27,12 @@
   height: var(--size);
   border-radius: 50%;
   background: var(--face);
-  box-shadow: inset 0 0 0 2px var(--ring), var(--face-shadow);
+  box-shadow: inset 0 0 0 2px var(--ring), 0 0 0 1px var(--face-edge), var(--face-shadow);
   -webkit-backdrop-filter: blur(10px) saturate(1.08);
   backdrop-filter: blur(10px) saturate(1.08);
   flex: 0 0 auto;
+  contain: layout paint;
+  isolation: isolate;
 }
 .analog .ac-tick {
   position: absolute;
@@ -100,7 +103,7 @@
   padding: 10px 14px;
   border-radius: 18px;
   background: var(--read-bg, rgba(6,8,12,.66));
-  box-shadow: inset 0 0 0 1px var(--read-border, rgba(255,255,255,.12)), 0 8px 20px rgba(0,0,0,.14);
+  box-shadow: inset 0 0 0 1px var(--read-border, rgba(255,255,255,.12)), var(--read-shadow, 0 8px 20px rgba(0,0,0,.14));
   -webkit-backdrop-filter: blur(10px) saturate(1.08);
   backdrop-filter: blur(10px) saturate(1.08);
   font-family: var(--num-font, "Manrope", system-ui, sans-serif);
@@ -124,8 +127,9 @@
 
 /* ── color schemes ──────────────────────────────────────────── */
 .ac-dark {
-  --face: rgba(28,30,38,.90);
-  --ring: rgba(255,255,255,.16);
+  --face: rgba(28,30,38,.94);
+  --face-edge: rgba(255,255,255,.10);
+  --ring: rgba(255,255,255,.18);
   --tick: rgba(255,255,255,.34);
   --tick-h: rgba(255,255,255,.94);
   --hand: #f4f2ec;
@@ -134,26 +138,29 @@
   --face-shadow: 0 12px 28px rgba(0,0,0,.22);
 }
 .ac-light {
-  --face: rgba(247,245,241,.92);
-  --ring: rgba(40,34,28,.14);
-  --tick: rgba(40,34,28,.36);
-  --tick-h: rgba(40,34,28,.88);
+  --face: rgba(247,245,241,.98);
+  --face-edge: rgba(40,34,28,.18);
+  --ring: rgba(40,34,28,.24);
+  --tick: rgba(40,34,28,.46);
+  --tick-h: rgba(40,34,28,.92);
   --hand: #2a2620;
   --num: rgba(40,34,28,.96);
-  --accent: #d2733a;
-  --face-shadow: 0 12px 26px rgba(40,34,28,.14);
+  --accent: #9f5125;
+  --face-shadow: 0 12px 28px rgba(40,34,28,.18);
 }
 .dl-dark {
   --num: #f4f2ec;
-  --sub: rgba(255,255,255,.78);
+  --sub: rgba(255,255,255,.84);
   --accent: #e7894c;
-  --read-bg: rgba(6,8,12,.66);
-  --read-border: rgba(255,255,255,.12);
+  --read-bg: rgba(6,8,12,.78);
+  --read-border: rgba(255,255,255,.16);
+  --read-shadow: 0 8px 20px rgba(0,0,0,.18);
 }
 .dl-light {
   --num: #2a2620;
-  --sub: rgba(45,39,32,.78);
-  --accent: #d2733a;
-  --read-bg: rgba(255,250,242,.90);
-  --read-border: rgba(40,34,28,.10);
+  --sub: rgba(45,39,32,.84);
+  --accent: #9f5125;
+  --read-bg: rgba(255,250,242,.98);
+  --read-border: rgba(40,34,28,.18);
+  --read-shadow: 0 10px 22px rgba(40,34,28,.16);
 }
