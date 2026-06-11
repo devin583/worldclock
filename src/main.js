@@ -484,14 +484,18 @@ function getContextMenuState() {
   };
 }
 
-async function openNativeContextMenu() {
+async function openNativeContextMenu(x, y) {
   if (!isTauri) return false;
   try {
-    await tauriInvoke('show_context_menu', { state: getContextMenuState() });
+    await tauriInvoke('show_context_menu', { state: getContextMenuState(), x, y });
     closeContextMenu();
     return true;
   } catch (e) {
     console.warn('[native context menu]', e);
+    if (isWindows) {
+      setPomodoroStatus('右键菜单打开失败，请使用托盘菜单或设置按钮');
+      return true;
+    }
     return false;
   }
 }
@@ -538,12 +542,13 @@ async function openContextMenu(event) {
   event.preventDefault();
   closeSettings(); syncMenuLabels();
 
-  // In Tauri, use the OS popup menu. HTML menus are clipped by the widget
-  // window and cannot behave like desktop-pet context menus on Windows.
-  if (await openNativeContextMenu()) return;
-
   const cx = event.clientX;
   const cy = event.clientY;
+
+  // In Tauri, use the OS popup menu anchored to the real right-click point.
+  // HTML menus are clipped by the widget window and cannot behave like
+  // desktop-pet context menus on Windows.
+  if (await openNativeContextMenu(cx, cy)) return;
 
   // Unhide at origin to measure natural dimensions
   contextMenu.classList.remove('hidden');

@@ -9,8 +9,8 @@ use std::{
 };
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu},
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, Position, Size, WebviewUrl,
-    WebviewWindow, WebviewWindowBuilder, WindowEvent,
+    AppHandle, Emitter, LogicalPosition, Manager, PhysicalPosition, PhysicalSize, Position, Size,
+    WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent,
 };
 
 const MIN_WINDOW_WIDTH: u32 = 360;
@@ -389,7 +389,12 @@ fn show_context_menu(
     app: AppHandle,
     window: WebviewWindow,
     state: ContextMenuState,
+    x: f64,
+    y: f64,
 ) -> Result<(), String> {
+    let anchor_x = if x.is_finite() { x.max(0.0) } else { 0.0 };
+    let anchor_y = if y.is_finite() { y.max(0.0) } else { 0.0 };
+
     let pomodoro_label = if state.pomodoro_running {
         "暂停番茄钟"
     } else if state.pomodoro_idle {
@@ -623,7 +628,15 @@ fn show_context_menu(
     )
     .map_err(|e| e.to_string())?;
 
-    window.popup_menu(&menu).map_err(|e| e.to_string())
+    window
+        .popup_menu_at(
+            &menu,
+            Position::Logical(LogicalPosition {
+                x: anchor_x,
+                y: anchor_y,
+            }),
+        )
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]

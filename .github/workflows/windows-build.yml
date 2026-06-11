@@ -39,6 +39,9 @@ jobs:
       - name: Audit visual contrast
         run: npm run audit:contrast
 
+      - name: Audit desktop interaction
+        run: npm run audit:interaction
+
       - name: Build Tauri Windows app
         run: npx tauri build --no-bundle
 
