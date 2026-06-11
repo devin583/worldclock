@@ -8,11 +8,12 @@
   font-family: "Manrope", system-ui, sans-serif;
   --zm-fg: #f4f2ec;
   --zm-sub: rgba(255,255,255,.88);
-  --zm-chip: rgba(255,255,255,.18);
-  --zm-chip-fg: rgba(255,255,255,.92);
+  --zm-chip: rgba(255,255,255,.20);
+  --zm-chip-fg: rgba(255,255,255,.94);
   --zm-accent: #e7894c;
-  --zm-halo: rgba(6,8,12,.70);
-  --zm-border: rgba(255,255,255,.12);
+  --zm-halo: rgba(6,8,12,.78);
+  --zm-border: rgba(255,255,255,.16);
+  --zm-shadow: 0 8px 20px rgba(0,0,0,.18);
   position: relative;
   isolation: isolate;
   padding: 7px 11px;
@@ -26,18 +27,19 @@
   z-index: -1;
   border-radius: 18px;
   background: var(--zm-halo);
-  box-shadow: inset 0 0 0 1px var(--zm-border), 0 8px 20px rgba(0,0,0,.16);
+  box-shadow: inset 0 0 0 1px var(--zm-border), var(--zm-shadow);
   -webkit-backdrop-filter: blur(10px) saturate(1.08);
   backdrop-filter: blur(10px) saturate(1.08);
 }
 .zone-meta.zm-light {
   --zm-fg: #2a2620;
-  --zm-sub: rgba(45,39,32,.82);
-  --zm-chip: rgba(40,34,28,.12);
-  --zm-chip-fg: rgba(45,39,32,.90);
-  --zm-accent: #d2733a;
-  --zm-halo: rgba(255,250,242,.90);
-  --zm-border: rgba(40,34,28,.10);
+  --zm-sub: rgba(45,39,32,.86);
+  --zm-chip: rgba(40,34,28,.14);
+  --zm-chip-fg: rgba(45,39,32,.94);
+  --zm-accent: #9f5125;
+  --zm-halo: rgba(255,250,242,.98);
+  --zm-border: rgba(40,34,28,.18);
+  --zm-shadow: 0 10px 22px rgba(40,34,28,.16);
   text-shadow: none;
 }
 .zone-meta.zm-center { align-items: center; text-align: center; }
@@ -52,6 +54,7 @@
   padding: 3px 9px; border-radius: 999px;
   background: var(--zm-chip); color: var(--zm-chip-fg);
   font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--zm-chip-fg) 14%, transparent);
 }
 .zm-dn {
   display: inline-flex; align-items: center; gap: 6px;
@@ -73,16 +76,18 @@
 /* world-pair: two zones with a difference marker ─────────────── */
 .world-pair {
   display: inline-flex;
-  --wp-line: rgba(6,8,12,.30);
-  --wp-pill-bg: rgba(6,8,12,.70);
+  --wp-line: rgba(6,8,12,.34);
+  --wp-pill-bg: rgba(6,8,12,.78);
   --wp-pill-fg: #f4f2ec;
-  --wp-pill-border: rgba(255,255,255,.12);
+  --wp-pill-border: rgba(255,255,255,.16);
+  --wp-pill-shadow: 0 6px 16px rgba(0,0,0,.18);
 }
 .world-pair.wp-light {
-  --wp-line: rgba(40,34,28,.22);
-  --wp-pill-bg: rgba(255,250,242,.92);
+  --wp-line: rgba(40,34,28,.34);
+  --wp-pill-bg: rgba(255,250,242,.98);
   --wp-pill-fg: #2a2620;
-  --wp-pill-border: rgba(40,34,28,.10);
+  --wp-pill-border: rgba(40,34,28,.18);
+  --wp-pill-shadow: 0 8px 18px rgba(40,34,28,.16);
 }
 
 /* stacked: city/meta on the left, clock on the right, two rows */
@@ -101,7 +106,7 @@
   font-family: "Manrope", system-ui, sans-serif;
   font-size: 13px; font-weight: 600; letter-spacing: .03em;
   padding: 4px 12px; border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--wp-pill-border), 0 6px 16px rgba(0,0,0,.14);
+  box-shadow: inset 0 0 0 1px var(--wp-pill-border), var(--wp-pill-shadow);
 }
 
 /* row: two clock columns side by side, diff pill in the middle */
@@ -122,5 +127,5 @@
   font-family: "Manrope", system-ui, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: .02em;
   padding: 5px 12px; border-radius: 999px; white-space: nowrap;
-  box-shadow: inset 0 0 0 1px var(--wp-pill-border), 0 6px 16px rgba(0,0,0,.14);
+  box-shadow: inset 0 0 0 1px var(--wp-pill-border), var(--wp-pill-shadow);
 }
