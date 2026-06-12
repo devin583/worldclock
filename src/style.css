@@ -213,7 +213,6 @@ body.surface-open #hover-controls {
 }
 
 #hover-controls button,
-.mode-btn,
 .floating-surface button {
   border: 0;
   cursor: pointer;
@@ -252,43 +251,6 @@ body.surface-open #hover-controls {
 #btn-lock .icon-lock-closed,
 #btn-lock.locked .icon-lock-open { display: none; }
 #btn-lock.locked .icon-lock-closed { display: block; }
-
-/* mode bar (bottom) */
-#mode-bar {
-  position: absolute;
-  left: 50%; bottom: -46px;
-  z-index: 4;
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 999px;
-  opacity: 0;
-  transform: translate(-50%, 8px);
-  pointer-events: none;
-  transition: opacity 150ms var(--ease-ui), transform 180ms var(--ease-out);
-}
-#clock-body:hover #mode-bar,
-#mode-bar:focus-within,
-body.is-hovering #mode-bar,
-body.surface-open #mode-bar {
-  opacity: 1;
-  transform: translate(-50%, 0);
-  pointer-events: auto;
-}
-
-.mode-btn {
-  min-width: 42px;
-  padding: 4px 9px;
-  border-radius: 999px;
-  color: var(--text-secondary);
-  background: transparent;
-  font-size: 11px;
-}
-.mode-btn:hover,
-.mode-btn.active {
-  color: var(--text-primary);
-  background: var(--control-active);
-}
 
 /* floating surfaces (context menu / settings) */
 .floating-surface {

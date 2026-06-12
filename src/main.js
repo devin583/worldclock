@@ -83,8 +83,6 @@ const btnPomodoro = document.getElementById('btn-pomodoro');
 const btnSettings = document.getElementById('btn-settings');
 const btnHide = document.getElementById('btn-hide');
 const btnCloseSettings = document.getElementById('btn-close-settings');
-const modeBar = document.getElementById('mode-bar');
-const modeBtns = document.querySelectorAll('.mode-btn');
 const setOpacity = document.getElementById('set-opacity');
 
 const pomodoroState = { phase: 'idle', running: false, durationMs: 0, remainingMs: 0, endAt: 0 };
@@ -328,7 +326,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) stopC
 
 function applyMode(mode) {
   config.mode = normalizeMode(mode);
-  modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === config.mode));
+  document.querySelectorAll('input[name="mode"]').forEach(i => { i.checked = i.value === config.mode; });
   buildClocks();
 }
 
@@ -603,6 +601,7 @@ async function openSettings(anchor = anchorFromElement(btnSettings)) {
   document.getElementById('set-focus-minutes').value = String(config.pomodoro.focusMinutes);
   document.getElementById('set-break-minutes').value = String(config.pomodoro.breakMinutes);
   document.querySelectorAll('input[name="clock-count"]').forEach(i => { i.checked = Number(i.value) === config.clockCount; });
+  document.querySelectorAll('input[name="mode"]').forEach(i => { i.checked = i.value === config.mode; });
   document.querySelectorAll('input[name="theme"]').forEach(i => { i.checked = i.value === config.theme; });
   document.querySelectorAll('input[name="surface-style"]').forEach(i => { i.checked = i.value === config.surfaceStyle; });
   document.querySelectorAll('input[name="time-format"]').forEach(i => { i.checked = i.value === config.timeFormat; });
@@ -615,6 +614,7 @@ async function openSettings(anchor = anchorFromElement(btnSettings)) {
 
 async function applySettings() {
   applyClockCount(document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount);
+  applyMode(document.querySelector('input[name="mode"]:checked')?.value ?? config.mode);
   config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Clock 1';
   config.clocks[0].tz = resolveTimezone(document.getElementById('set-tz-1').value, config.clocks[0].tz);
   config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Clock 2';
@@ -638,7 +638,7 @@ async function applySettings() {
 // ── interaction ───────────────────────────────────────────────────────────
 
 function isInteractiveTarget(target) {
-  return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls, #mode-bar'));
+  return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls'));
 }
 function hideInteractionSurfacesNow() {
   if (!body.classList.contains('is-hovering')) return;
@@ -675,7 +675,6 @@ clockBody.addEventListener('pointerleave', hideInteractionSurfacesSoon);
 objectShell.addEventListener('pointerenter', showInteractionSurfaces);
 objectShell.addEventListener('pointermove', showInteractionSurfaces);
 hoverControls.addEventListener('transitionend', scheduleHitRegionUpdate);
-modeBar.addEventListener('transitionend', scheduleHitRegionUpdate);
 
 btnSettings.addEventListener('click', () => {
   if (isTauri) { openSettings(anchorFromElement(btnSettings)); return; }
@@ -694,7 +693,6 @@ btnHide.addEventListener('click', () => { if (isTauri) invoke('hide_window'); })
 document.querySelectorAll('input[name="clock-count"]').forEach(i => {
   i.addEventListener('change', syncSettingsClockCountVisibility);
 });
-modeBtns.forEach(b => b.addEventListener('click', async () => { applyMode(b.dataset.mode); await saveConfig(); }));
 setOpacity.addEventListener('input', () => applyOpacity(setOpacity.value));
 
 async function handleContextMenuAction(action, anchor) {
@@ -726,7 +724,7 @@ contextMenu.addEventListener('click', async event => {
 });
 
 document.addEventListener('pointerdown', event => {
-  const inside = event.target.closest('#context-menu, #settings-panel, #hover-controls, #mode-bar, #object-shell');
+  const inside = event.target.closest('#context-menu, #settings-panel, #hover-controls, #object-shell');
   if (!inside) closeFloatingSurfaces();
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFloatingSurfaces(); });
