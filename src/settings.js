@@ -42,6 +42,7 @@ const DEFAULT_CONFIG = {
   on_top: true,
   theme: 'classic',
   surfaceStyle: 'transparent',
+  surfaceStyleExplicit: false,
   timeFormat: '24',
   opacity: 0.88,
   autostart: false,
@@ -101,6 +102,7 @@ function normalizePomodoro(v = {}) {
 function normalizeConfig(saved = {}) {
   const src = saved && typeof saved === 'object' ? saved : {};
   const savedClocks = Array.isArray(src.clocks) ? src.clocks : [];
+  const surfaceStyleExplicit = src.surfaceStyleExplicit === true;
   return {
     ...DEFAULT_CONFIG,
     ...src,
@@ -111,7 +113,8 @@ function normalizeConfig(saved = {}) {
     clockCount: normalizeClockCount(src.clockCount ?? DEFAULT_CONFIG.clockCount),
     mode: normalizeMode(src.mode),
     theme: normalizeTheme(src.theme),
-    surfaceStyle: normalizeSurfaceStyle(src.surfaceStyle),
+    surfaceStyle: surfaceStyleExplicit ? normalizeSurfaceStyle(src.surfaceStyle) : DEFAULT_CONFIG.surfaceStyle,
+    surfaceStyleExplicit,
     timeFormat: normalizeTimeFormat(src.timeFormat),
     opacity: clampNumber(src.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
     locked: Boolean(src.locked),
@@ -188,6 +191,7 @@ function readFormConfig() {
     mode: checkedValue('mode', config.mode),
     theme: checkedValue('theme', config.theme),
     surfaceStyle: checkedValue('surface-style', config.surfaceStyle),
+    surfaceStyleExplicit: true,
     timeFormat: checkedValue('time-format', config.timeFormat),
     opacity: $('set-opacity').value,
     locked: $('set-locked').checked,
