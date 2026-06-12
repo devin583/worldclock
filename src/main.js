@@ -83,6 +83,7 @@ const btnPomodoro = document.getElementById('btn-pomodoro');
 const btnSettings = document.getElementById('btn-settings');
 const btnHide = document.getElementById('btn-hide');
 const btnCloseSettings = document.getElementById('btn-close-settings');
+const modeBar = document.getElementById('mode-bar');
 const modeBtns = document.querySelectorAll('.mode-btn');
 const setOpacity = document.getElementById('set-opacity');
 
@@ -244,6 +245,7 @@ function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
 // ── pomodoro ──────────────────────────────────────────────────────────────
 
 let tickTimerId = null;
+let hoverHideTimerId = 0;
 
 function pomodoroDuration(phase) {
   return (phase === 'break' ? config.pomodoro.breakMinutes : config.pomodoro.focusMinutes) * 60000;
@@ -440,6 +442,7 @@ function isSurfaceOpen() {
 function setSurfaceOpenClass() {
   body.classList.toggle('surface-open', isSurfaceOpen());
   scheduleHitRegionUpdate();
+  if (!isSurfaceOpen()) hideInteractionSurfacesSoon();
 }
 function positionSurface(el, x, y, offset = 10) {
   el.classList.remove('hidden');
@@ -637,16 +640,30 @@ async function applySettings() {
 function isInteractiveTarget(target) {
   return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls, #mode-bar'));
 }
+function hideInteractionSurfacesNow() {
+  if (!body.classList.contains('is-hovering')) return;
+  body.classList.remove('is-hovering');
+  scheduleHitRegionUpdate();
+}
+function scheduleInteractionSurfaceHide(delay = 1200) {
+  window.clearTimeout(hoverHideTimerId);
+  hoverHideTimerId = window.setTimeout(() => {
+    hoverHideTimerId = 0;
+    if (isSurfaceOpen()) {
+      scheduleInteractionSurfaceHide(700);
+      return;
+    }
+    hideInteractionSurfacesNow();
+  }, delay);
+}
 function showInteractionSurfaces() {
+  scheduleInteractionSurfaceHide();
   if (body.classList.contains('is-hovering')) return; // already shown; hit-regions unchanged
   body.classList.add('is-hovering');
   scheduleHitRegionUpdate();
 }
 function hideInteractionSurfacesSoon() {
-  window.setTimeout(() => {
-    if (isSurfaceOpen()) return;
-    body.classList.remove('is-hovering'); scheduleHitRegionUpdate();
-  }, 190);
+  scheduleInteractionSurfaceHide(190);
 }
 
 clockBody.addEventListener('pointerdown', showInteractionSurfaces);
@@ -658,7 +675,7 @@ clockBody.addEventListener('pointerleave', hideInteractionSurfacesSoon);
 objectShell.addEventListener('pointerenter', showInteractionSurfaces);
 objectShell.addEventListener('pointermove', showInteractionSurfaces);
 hoverControls.addEventListener('transitionend', scheduleHitRegionUpdate);
-document.getElementById('mode-bar').addEventListener('transitionend', scheduleHitRegionUpdate);
+modeBar.addEventListener('transitionend', scheduleHitRegionUpdate);
 
 btnSettings.addEventListener('click', () => {
   if (isTauri) { openSettings(anchorFromElement(btnSettings)); return; }

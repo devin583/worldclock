@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 
 const files = {
+  index: fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8'),
   main: fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'),
   lib: fs.readFileSync(new URL('../src-tauri/src/lib.rs', import.meta.url), 'utf8'),
   tauri: fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
@@ -73,6 +74,18 @@ const checks = [
   {
     name: 'context menu opens settings natively instead of bouncing through the webview',
     ok: hasRust(/"context_open_settings"\s*=>\s*\{\s*let _ = open_settings_window\(app\);\s*\}/),
+  },
+  {
+    name: 'hover controls auto-hide even if pointerleave is missed',
+    ok: files.main.includes('let hoverHideTimerId = 0;')
+      && files.main.includes('function scheduleInteractionSurfaceHide')
+      && files.main.includes('function hideInteractionSurfacesNow')
+      && files.main.includes('if (isSurfaceOpen())')
+      && files.main.includes('hideInteractionSurfacesSoon();'),
+  },
+  {
+    name: 'main script is cache-busted so webview upgrades do not run stale interaction code',
+    ok: /<script\s+src="main\.js\?v=[^"]+"><\/script>/.test(files.index),
   },
 ];
 
