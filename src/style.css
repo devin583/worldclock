@@ -80,6 +80,10 @@ button { color: inherit; }
   padding: clamp(12px, 3.6vw, 22px) clamp(16px, 4.8vw, 32px);
   background: transparent;
 }
+body:not(.is-locked) #object-shell { cursor: grab; }
+body:not(.is-locked) #object-shell:active,
+body.is-dragging #object-shell { cursor: grabbing; }
+body.is-locked #object-shell { cursor: default; }
 
 /* progress ring (pomodoro) */
 #progress-ring {
@@ -128,11 +132,13 @@ body.pomodoro-done #object-shell { animation: done-shake 520ms var(--ease-out) 1
 body.surface-solid #main::before {
   content: "";
   position: absolute;
-  inset: -22px -28px;
-  border-radius: 28px;
-  background: linear-gradient(180deg, rgba(32, 34, 40, 0.94), rgba(16, 18, 22, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.32);
+  inset: -14px -18px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.10), transparent 30%),
+    linear-gradient(180deg, rgba(24, 27, 34, 0.74), rgba(10, 12, 18, 0.78));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
   backdrop-filter: blur(20px) saturate(1.1);
   -webkit-backdrop-filter: blur(20px) saturate(1.1);
   opacity: var(--clock-opacity);
@@ -140,19 +146,25 @@ body.surface-solid #main::before {
 }
 body.surface-solid #main > * { position: relative; z-index: 1; }
 body.theme-minimal.surface-solid #main::before {
-  background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(239, 235, 226, 0.96));
-  border-color: rgba(40, 34, 28, 0.16);
-  box-shadow: 0 20px 48px rgba(40, 34, 28, 0.18);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.72), transparent 32%),
+    linear-gradient(180deg, rgba(255, 250, 242, 0.82), rgba(239, 235, 226, 0.78));
+  border-color: rgba(40, 34, 28, 0.12);
+  box-shadow: 0 14px 34px rgba(40, 34, 28, 0.14);
 }
 body.theme-cute.surface-solid #main::before {
-  background: linear-gradient(180deg, rgba(255, 247, 238, 0.98), rgba(246, 218, 195, 0.96));
-  border-color: rgba(110, 65, 35, 0.16);
-  box-shadow: 0 20px 48px rgba(110, 65, 35, 0.18);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.64), transparent 32%),
+    linear-gradient(180deg, rgba(255, 247, 238, 0.82), rgba(246, 218, 195, 0.78));
+  border-color: rgba(110, 65, 35, 0.12);
+  box-shadow: 0 14px 34px rgba(110, 65, 35, 0.14);
 }
 body.theme-glass.surface-solid #main::before {
-  background: linear-gradient(180deg, rgba(36, 39, 50, 0.72), rgba(10, 12, 18, 0.82));
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.30);
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.12), transparent 32%),
+    linear-gradient(180deg, rgba(36, 39, 50, 0.58), rgba(10, 12, 18, 0.66));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24);
 }
 
 /* pomodoro status */

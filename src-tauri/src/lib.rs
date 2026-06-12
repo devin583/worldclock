@@ -37,6 +37,18 @@ struct MainWindowReadyState(Arc<AtomicBool>);
 #[derive(Default)]
 struct ContextMenuAnchorState(Mutex<Option<(f64, f64)>>);
 
+#[derive(Debug, Clone, Copy)]
+struct DragMoveSnapshot {
+    start_cursor_x: f64,
+    start_cursor_y: f64,
+    start_window_x: i32,
+    start_window_y: i32,
+    scale: f64,
+}
+
+#[derive(Default)]
+struct DragMoveState(Mutex<Option<DragMoveSnapshot>>);
+
 #[derive(Debug, Deserialize)]
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 struct HitTestRegion {
@@ -176,6 +188,16 @@ fn take_context_settings_anchor(app: &AppHandle) -> Option<(f64, f64)> {
 
 fn clear_context_settings_anchor(app: &AppHandle) {
     set_context_settings_anchor(app, None);
+}
+
+fn window_scale_factor(window: &WebviewWindow) -> f64 {
+    window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .map(|monitor| monitor.scale_factor())
+        .unwrap_or_else(|| window.scale_factor().unwrap_or(1.0))
+        .max(0.1)
 }
 
 fn settings_window_position(
@@ -411,8 +433,76 @@ fn set_theme(app: AppHandle, theme: String) {
 }
 
 #[tauri::command]
-fn start_dragging(window: WebviewWindow) {
-    let _ = window.start_dragging();
+fn start_dragging(window: WebviewWindow) -> Result<(), String> {
+    window.start_dragging().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn begin_window_drag(
+    app: AppHandle,
+    window: WebviewWindow,
+    screen_x: f64,
+    screen_y: f64,
+) -> Result<(), String> {
+    let position = window.outer_position().map_err(|e| e.to_string())?;
+    let scale = window_scale_factor(&window);
+    let state = app.state::<DragMoveState>();
+    let mut drag = state
+        .0
+        .lock()
+        .map_err(|_| "drag state lock poisoned".to_string())?;
+
+    *drag = Some(DragMoveSnapshot {
+        start_cursor_x: screen_x * scale,
+        start_cursor_y: screen_y * scale,
+        start_window_x: position.x,
+        start_window_y: position.y,
+        scale,
+    });
+
+    Ok(())
+}
+
+#[tauri::command]
+fn move_window_drag(
+    app: AppHandle,
+    window: WebviewWindow,
+    screen_x: f64,
+    screen_y: f64,
+) -> Result<(), String> {
+    let state = app.state::<DragMoveState>();
+    let drag = state
+        .0
+        .lock()
+        .map_err(|_| "drag state lock poisoned".to_string())?
+        .as_ref()
+        .copied();
+
+    let Some(drag) = drag else {
+        return Ok(());
+    };
+
+    let next_x =
+        drag.start_window_x as f64 + (screen_x * drag.scale - drag.start_cursor_x);
+    let next_y =
+        drag.start_window_y as f64 + (screen_y * drag.scale - drag.start_cursor_y);
+
+    window
+        .set_position(Position::Physical(PhysicalPosition {
+            x: next_x.round() as i32,
+            y: next_y.round() as i32,
+        }))
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn end_window_drag(app: AppHandle, window: WebviewWindow) -> Result<(), String> {
+    let state = app.state::<DragMoveState>();
+    if let Ok(mut drag) = state.0.lock() {
+        *drag = None;
+    }
+    save_window_state(&app, &window);
+    Ok(())
 }
 
 #[tauri::command]
@@ -934,6 +1024,7 @@ pub fn run() {
             let main_ready = MainWindowReadyState::default();
             _app.manage(main_ready.clone());
             _app.manage(ContextMenuAnchorState::default());
+            _app.manage(DragMoveState::default());
 
             #[cfg(target_os = "windows")]
             if let Err(err) = tray::setup_tray(_app.handle()) {
@@ -971,6 +1062,9 @@ pub fn run() {
             set_locked,
             set_theme,
             start_dragging,
+            begin_window_drag,
+            move_window_drag,
+            end_window_drag,
             main_window_ready,
             show_settings_window,
             close_settings_window,

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const files = {
   index: fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8'),
   main: fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'),
+  settings: fs.readFileSync(new URL('../src/settings.js', import.meta.url), 'utf8'),
   style: fs.readFileSync(new URL('../src/style.css', import.meta.url), 'utf8'),
   lib: fs.readFileSync(new URL('../src-tauri/src/lib.rs', import.meta.url), 'utf8'),
   tauri: fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
@@ -99,6 +100,29 @@ const checks = [
       && files.lib.includes('"context_mode_digital"')
       && files.lib.includes('"context_mode_analog"')
       && files.lib.includes('"context_mode_both"'),
+  },
+  {
+    name: 'main clock dragging is explicit and not delegated to stale data-tauri-drag-region',
+    ok: !/id="object-shell"[^>]*data-tauri-drag-region/.test(files.index)
+      && files.main.includes("clockBody.addEventListener('pointerdown', handleClockPointerDown)")
+      && files.main.includes('function canStartClockDrag')
+      && files.main.includes('!config.locked'),
+  },
+  {
+    name: 'Windows drag fallback moves the native window when start_dragging is unreliable',
+    ok: files.main.includes("tauriInvoke('begin_window_drag'")
+      && files.main.includes("tauriInvoke('move_window_drag'")
+      && files.main.includes("tauriInvoke('end_window_drag'")
+      && files.lib.includes('fn begin_window_drag')
+      && files.lib.includes('fn move_window_drag')
+      && files.lib.includes('fn end_window_drag')
+      && files.lib.includes('DragMoveState::default()'),
+  },
+  {
+    name: 'legacy solid backing configs migrate back to transparent object mode',
+    ok: files.main.includes('surfaceStyleExplicit')
+      && files.settings.includes('surfaceStyleExplicit')
+      && /surfaceStyle:\s*surfaceStyleExplicit\s*\?\s*normalizeSurfaceStyle/.test(files.main),
   },
 ];
 

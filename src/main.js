@@ -60,6 +60,7 @@ const DEFAULT_CONFIG = {
   on_top: true,
   theme: 'classic',
   surfaceStyle: 'transparent',
+  surfaceStyleExplicit: false,
   timeFormat: '24',
   opacity: 0.88,
   autostart: false,
@@ -68,6 +69,10 @@ const DEFAULT_CONFIG = {
 
 let config = normalizeConfig();
 let hitRegionFrame = 0;
+let dragPointerId = null;
+let dragFrame = 0;
+let dragLastPoint = null;
+let dragUsedManualMove = false;
 
 const body = document.body;
 const clockBody = document.getElementById('clock-body');
@@ -119,6 +124,7 @@ function normalizePomodoro(v = {}) {
 function normalizeConfig(saved = {}) {
   const src = saved && typeof saved === 'object' ? saved : {};
   const savedClocks = Array.isArray(src.clocks) ? src.clocks : [];
+  const surfaceStyleExplicit = src.surfaceStyleExplicit === true;
   return {
     ...DEFAULT_CONFIG, ...src,
     clocks: [
@@ -128,7 +134,8 @@ function normalizeConfig(saved = {}) {
     clockCount: normalizeClockCount(src.clockCount ?? DEFAULT_CONFIG.clockCount),
     mode: normalizeMode(src.mode),
     theme: normalizeTheme(src.theme),
-    surfaceStyle: normalizeSurfaceStyle(src.surfaceStyle),
+    surfaceStyle: surfaceStyleExplicit ? normalizeSurfaceStyle(src.surfaceStyle) : DEFAULT_CONFIG.surfaceStyle,
+    surfaceStyleExplicit,
     timeFormat: normalizeTimeFormat(src.timeFormat),
     opacity: clampNumber(src.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
     locked: Boolean(src.locked),
@@ -339,8 +346,9 @@ function applyTheme(theme) {
   buildClocks();
 }
 
-function applySurfaceStyle(style) {
+function applySurfaceStyle(style, options = {}) {
   config.surfaceStyle = normalizeSurfaceStyle(style);
+  if (options.explicit) config.surfaceStyleExplicit = true;
   body.classList.remove(...SURFACE_STYLE_CLASSES);
   body.classList.add(`surface-${config.surfaceStyle}`);
   document.querySelectorAll('input[name="surface-style"]').forEach(i => { i.checked = i.value === config.surfaceStyle; });
@@ -384,7 +392,6 @@ function applyLock(locked) {
   btnLock.classList.toggle('locked', config.locked);
   btnLock.setAttribute('aria-label', config.locked ? '解锁位置' : '锁定位置');
   btnLock.title = config.locked ? '解锁位置' : '锁定位置';
-  objectShell.toggleAttribute('data-tauri-drag-region', !config.locked);
   if (isTauri) invoke('set_locked', { locked: config.locked });
   syncMenuLabels();
 }
@@ -620,7 +627,7 @@ async function applySettings() {
   config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Clock 2';
   config.clocks[1].tz = resolveTimezone(document.getElementById('set-tz-2').value, config.clocks[1].tz);
   applyTheme(document.querySelector('input[name="theme"]:checked')?.value ?? config.theme);
-  applySurfaceStyle(document.querySelector('input[name="surface-style"]:checked')?.value ?? config.surfaceStyle);
+  applySurfaceStyle(document.querySelector('input[name="surface-style"]:checked')?.value ?? config.surfaceStyle, { explicit: true });
   applyTimeFormat(document.querySelector('input[name="time-format"]:checked')?.value ?? config.timeFormat);
   applyOpacity(document.getElementById('set-opacity').value);
   applyOnTop(document.getElementById('set-ontop').checked);
@@ -639,6 +646,19 @@ async function applySettings() {
 
 function isInteractiveTarget(target) {
   return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls'));
+}
+function isClockDragTarget(target) {
+  return Boolean(target.closest(
+    '#object-shell, .flip-clock, .fc-digit, .fc-meta, .fc-ampm, .analog, .dual, .dl-read, .zone-meta, .wp-pill'
+  ));
+}
+function canStartClockDrag(event) {
+  return isTauri
+    && event.button === 0
+    && !config.locked
+    && !isSurfaceOpen()
+    && !isInteractiveTarget(event.target)
+    && isClockDragTarget(event.target);
 }
 function hideInteractionSurfacesNow() {
   if (!body.classList.contains('is-hovering')) return;
@@ -666,9 +686,115 @@ function hideInteractionSurfacesSoon() {
   scheduleInteractionSurfaceHide(190);
 }
 
-clockBody.addEventListener('pointerdown', showInteractionSurfaces);
-// drag is handled natively via data-tauri-drag-region on #object-shell (sync, no IPC latency)
+function dragPoint(event) {
+  return { screenX: event.screenX, screenY: event.screenY };
+}
+
+async function requestNativeDrag() {
+  if (!isTauri) return false;
+  try {
+    await tauriInvoke('start_dragging');
+    return true;
+  } catch (e) {
+    console.warn('[native drag]', e);
+    return false;
+  }
+}
+
+async function beginManualDrag(event) {
+  dragPointerId = event.pointerId;
+  dragLastPoint = dragPoint(event);
+  dragUsedManualMove = false;
+  body.classList.add('is-dragging');
+  try { clockBody.setPointerCapture(event.pointerId); } catch {}
+
+  try {
+    await tauriInvoke('begin_window_drag', dragLastPoint);
+  } catch (e) {
+    console.warn('[manual drag begin]', e);
+    dragPointerId = null;
+    dragLastPoint = null;
+    body.classList.remove('is-dragging');
+    try { clockBody.releasePointerCapture(event.pointerId); } catch {}
+    await requestNativeDrag();
+  }
+}
+
+function flushManualDragMove() {
+  dragFrame = 0;
+  if (dragPointerId === null || !dragLastPoint) return;
+  dragUsedManualMove = true;
+  void tauriInvoke('move_window_drag', dragLastPoint).catch((e) => {
+    console.warn('[manual drag move]', e);
+  });
+}
+
+function queueManualDragMove(event) {
+  if (dragPointerId !== event.pointerId) return;
+  dragLastPoint = dragPoint(event);
+  if (dragFrame) return;
+  dragFrame = window.requestAnimationFrame(flushManualDragMove);
+}
+
+async function endManualDrag(event) {
+  if (dragPointerId !== event.pointerId) return;
+  if (dragFrame) {
+    window.cancelAnimationFrame(dragFrame);
+    dragFrame = 0;
+  }
+  try { clockBody.releasePointerCapture(event.pointerId); } catch {}
+  dragPointerId = null;
+  dragLastPoint = null;
+  body.classList.remove('is-dragging');
+  try {
+    await tauriInvoke('end_window_drag');
+  } catch (e) {
+    console.warn('[manual drag end]', e);
+  }
+  if (dragUsedManualMove) {
+    hideInteractionSurfacesSoon();
+    scheduleHitRegionUpdate();
+  }
+  dragUsedManualMove = false;
+}
+
+async function cancelManualDrag() {
+  if (dragPointerId === null) return;
+  if (dragFrame) {
+    window.cancelAnimationFrame(dragFrame);
+    dragFrame = 0;
+  }
+  dragPointerId = null;
+  dragLastPoint = null;
+  dragUsedManualMove = false;
+  body.classList.remove('is-dragging');
+  try {
+    await tauriInvoke('end_window_drag');
+  } catch (e) {
+    console.warn('[manual drag cancel]', e);
+  }
+}
+
+function handleClockPointerDown(event) {
+  showInteractionSurfaces();
+  if (!canStartClockDrag(event)) return;
+
+  event.preventDefault();
+  closeFloatingSurfaces();
+
+  if (isWindows) {
+    void beginManualDrag(event);
+    return;
+  }
+
+  void requestNativeDrag();
+}
+
+clockBody.addEventListener('pointerdown', handleClockPointerDown);
 clockBody.addEventListener('contextmenu', openContextMenu);
+clockBody.addEventListener('pointermove', queueManualDragMove);
+clockBody.addEventListener('pointerup', endManualDrag);
+clockBody.addEventListener('pointercancel', endManualDrag);
 clockBody.addEventListener('pointerenter', showInteractionSurfaces);
 clockBody.addEventListener('pointermove', showInteractionSurfaces);
 clockBody.addEventListener('pointerleave', hideInteractionSurfacesSoon);
@@ -708,8 +834,8 @@ async function handleContextMenuAction(action, anchor) {
   if (action === 'set-theme-minimal') applyTheme('minimal');
   if (action === 'set-theme-cute') applyTheme('cute');
   if (action === 'set-theme-glass') applyTheme('glass');
-  if (action === 'set-surface-transparent') applySurfaceStyle('transparent');
-  if (action === 'set-surface-solid') applySurfaceStyle('solid');
+  if (action === 'set-surface-transparent') applySurfaceStyle('transparent', { explicit: true });
+  if (action === 'set-surface-solid') applySurfaceStyle('solid', { explicit: true });
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
@@ -728,6 +854,7 @@ document.addEventListener('pointerdown', event => {
   if (!inside) closeFloatingSurfaces();
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFloatingSurfaces(); });
+window.addEventListener('blur', () => { void cancelManualDrag(); });
 window.addEventListener('resize', scheduleHitRegionUpdate);
 
 // ── hit regions ───────────────────────────────────────────────────────────
