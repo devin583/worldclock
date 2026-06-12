@@ -705,7 +705,7 @@ fn show_context_menu(
     let surface_solid = CheckMenuItem::with_id(
         &app,
         "context_surface_solid",
-        "带底板",
+        "局部底色",
         true,
         state.surface_style == "solid",
         None::<&str>,

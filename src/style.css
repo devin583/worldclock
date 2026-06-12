@@ -11,6 +11,10 @@
   --accent-1: #e7894c;
   --input-bg: rgba(255, 255, 255, 0.15);
   --input-border: rgba(255, 255, 255, 0.34);
+  --local-dark-transparent: rgba(6, 8, 12, 0.66);
+  --local-dark-solid: rgba(6, 8, 12, 0.88);
+  --local-light-transparent: rgba(255, 250, 242, 0.86);
+  --local-light-solid: rgba(255, 250, 242, 0.98);
   --progress: 0deg;
   --ease-ui: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -33,6 +37,30 @@ body.theme-glass {
   --surface-border: rgba(255, 255, 255, 0.28);
   --control-active: rgba(255, 255, 255, 0.30);
   --control-hover: rgba(255, 255, 255, 0.24);
+}
+
+body.surface-transparent .fc-classic,
+body.surface-transparent .fc-glass {
+  --meta-bg: var(--local-dark-transparent);
+  --meta-border: rgba(255, 255, 255, 0.14);
+  --meta-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+}
+
+body.surface-transparent .fc-minimal,
+body.surface-transparent .fc-cute {
+  --meta-bg: var(--local-light-transparent);
+  --meta-border: rgba(40, 34, 28, 0.14);
+  --meta-shadow: 0 6px 16px rgba(40, 34, 28, 0.12);
+}
+
+body.surface-solid .fc-classic,
+body.surface-solid .fc-glass {
+  --meta-bg: var(--local-dark-solid);
+}
+
+body.surface-solid .fc-minimal,
+body.surface-solid .fc-cute {
+  --meta-bg: var(--local-light-solid);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,7 +90,7 @@ button { color: inherit; }
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  padding: clamp(44px, 8vw, 62px) clamp(10px, 3vw, 20px);
+  padding: clamp(14px, 3.5vw, 28px) clamp(10px, 3vw, 20px);
 }
 
 #clock-body {
@@ -128,45 +156,6 @@ body.pomodoro-done #object-shell { animation: done-shake 520ms var(--ease-out) 1
   gap: clamp(28px, 6vw, 56px);
 }
 
-/* solid surface card behind the world-pair */
-body.surface-solid #main::before {
-  content: "";
-  position: absolute;
-  inset: -14px -18px;
-  border-radius: 26px;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.10), transparent 30%),
-    linear-gradient(180deg, rgba(24, 27, 34, 0.74), rgba(10, 12, 18, 0.78));
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(20px) saturate(1.1);
-  -webkit-backdrop-filter: blur(20px) saturate(1.1);
-  opacity: var(--clock-opacity);
-  z-index: 0;
-}
-body.surface-solid #main > * { position: relative; z-index: 1; }
-body.theme-minimal.surface-solid #main::before {
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.72), transparent 32%),
-    linear-gradient(180deg, rgba(255, 250, 242, 0.82), rgba(239, 235, 226, 0.78));
-  border-color: rgba(40, 34, 28, 0.12);
-  box-shadow: 0 14px 34px rgba(40, 34, 28, 0.14);
-}
-body.theme-cute.surface-solid #main::before {
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.64), transparent 32%),
-    linear-gradient(180deg, rgba(255, 247, 238, 0.82), rgba(246, 218, 195, 0.78));
-  border-color: rgba(110, 65, 35, 0.12);
-  box-shadow: 0 14px 34px rgba(110, 65, 35, 0.14);
-}
-body.theme-glass.surface-solid #main::before {
-  background:
-    radial-gradient(circle at 18% 12%, rgba(255, 255, 255, 0.12), transparent 32%),
-    linear-gradient(180deg, rgba(36, 39, 50, 0.58), rgba(10, 12, 18, 0.66));
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.24);
-}
-
 /* pomodoro status */
 #pomodoro-status {
   position: relative;
@@ -188,7 +177,6 @@ body.theme-glass.surface-solid #main::before {
 
 /* ── control surfaces ───────────────────────────────────── */
 
-.control-surface,
 .floating-surface {
   pointer-events: auto;
   color: var(--text-primary);
@@ -199,70 +187,11 @@ body.theme-glass.surface-solid #main::before {
   -webkit-backdrop-filter: blur(20px) saturate(1.18);
 }
 
-/* hover controls (top toolbar) */
-#hover-controls {
-  position: absolute;
-  left: 50%; top: -48px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 999px;
-  opacity: 0;
-  transform: translate(-50%, -8px) scale(0.98);
-  pointer-events: none;
-  transition: opacity 150ms var(--ease-ui), transform 180ms var(--ease-out);
-}
-
-#clock-body:hover #hover-controls,
-#hover-controls:focus-within,
-body.is-hovering #hover-controls,
-body.surface-open #hover-controls {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
-  pointer-events: auto;
-}
-
-#hover-controls button,
 .floating-surface button {
   border: 0;
   cursor: pointer;
   transition: background 140ms var(--ease-ui), color 140ms var(--ease-ui), transform 140ms var(--ease-ui);
 }
-
-#hover-controls button {
-  width: 28px; height: 28px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: var(--text-secondary);
-  background: transparent;
-}
-#hover-controls button:hover,
-#hover-controls button.active {
-  color: var(--text-primary);
-  background: var(--control-hover);
-}
-#hover-controls button:active { transform: scale(0.94); }
-#hover-controls svg {
-  width: 15px; height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-#btn-pomodoro span {
-  font-family: "Cascadia Mono", "Segoe UI Mono", monospace;
-  font-size: 10px;
-  font-weight: 800;
-}
-
-#btn-lock .icon-lock-closed,
-#btn-lock.locked .icon-lock-open { display: none; }
-#btn-lock.locked .icon-lock-closed { display: block; }
 
 /* floating surfaces (context menu / settings) */
 .floating-surface {
@@ -404,6 +333,16 @@ body.surface-open #hover-controls {
 #btn-cancel:hover {
   color: var(--text-primary);
   background: var(--control-hover);
+}
+
+body.platform-windows .fc-meta,
+body.platform-windows .zone-meta::before,
+body.platform-windows .wp-pill,
+body.platform-windows .analog,
+body.platform-windows .dl-read,
+body.platform-windows .floating-surface {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 /* ── world-pair layout tweaks ──────────────────────────── */
