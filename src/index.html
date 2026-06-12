@@ -56,11 +56,6 @@
         </button>
       </div>
 
-      <div id="mode-bar" class="control-surface" data-hit-region data-hit-radius="14" data-hit-pad="5">
-        <button class="mode-btn active" data-mode="digital">数字</button>
-        <button class="mode-btn" data-mode="analog">指针</button>
-        <button class="mode-btn" data-mode="both">双显</button>
-      </div>
     </section>
 
     <nav id="context-menu" class="floating-surface hidden" data-hit-region data-hit-radius="14" data-hit-pad="8" aria-label="快捷菜单">
@@ -83,6 +78,15 @@
         <div class="radio-group">
           <label><input type="radio" name="clock-count" value="1" /> 单时钟</label>
           <label><input type="radio" name="clock-count" value="2" checked /> 双时钟</label>
+        </div>
+      </section>
+
+      <section>
+        <label>显示模式</label>
+        <div class="radio-group">
+          <label><input type="radio" name="mode" value="digital" checked /> 数字</label>
+          <label><input type="radio" name="mode" value="analog" /> 指针</label>
+          <label><input type="radio" name="mode" value="both" /> 双显</label>
         </div>
       </section>
 
@@ -179,6 +183,6 @@
   <script src="flip-clock.js"></script>
   <script src="analog-clock.js"></script>
   <script src="world-clock.js"></script>
-  <script src="main.js?v=hover-auto-hide"></script>
+  <script src="main.js?v=context-primary-controls"></script>
 </body>
 </html>

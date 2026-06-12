@@ -3,6 +3,7 @@ import fs from 'node:fs';
 const files = {
   index: fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8'),
   main: fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'),
+  style: fs.readFileSync(new URL('../src/style.css', import.meta.url), 'utf8'),
   lib: fs.readFileSync(new URL('../src-tauri/src/lib.rs', import.meta.url), 'utf8'),
   tauri: fs.readFileSync(new URL('../src-tauri/tauri.conf.json', import.meta.url), 'utf8'),
 };
@@ -86,6 +87,18 @@ const checks = [
   {
     name: 'main script is cache-busted so webview upgrades do not run stale interaction code',
     ok: /<script\s+src="main\.js\?v=[^"]+"><\/script>/.test(files.index),
+  },
+  {
+    name: 'display mode is controlled by settings and native context menu, not a bottom webview bar',
+    ok: !files.index.includes('id="mode-bar"')
+      && !files.main.includes('modeBar')
+      && !files.style.includes('#mode-bar')
+      && files.index.includes('name="mode" value="digital"')
+      && files.index.includes('name="mode" value="analog"')
+      && files.index.includes('name="mode" value="both"')
+      && files.lib.includes('"context_mode_digital"')
+      && files.lib.includes('"context_mode_analog"')
+      && files.lib.includes('"context_mode_both"'),
   },
 ];
 
