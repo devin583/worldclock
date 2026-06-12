@@ -46,7 +46,31 @@ const checks = [
   },
   {
     name: 'transparent mode uses visible clock objects instead of one rectangular webview',
-    ok: /if \(isSolid[\s\S]*pushRegion\(regions, clockRect[\s\S]*else \{[\s\S]*collectClockObjectRegions\(regions, scale\)/.test(files.main),
+    ok: files.main.includes('collectClockObjectRegions(regions, scale);')
+      && !files.main.includes('const isSolid')
+      && !/pushRegion\(regions,\s*clockRect,\s*scale,\s*28,\s*28\)/.test(files.main),
+  },
+  {
+    name: 'main clock surface does not render a stretched rectangular backing plate',
+    ok: !files.style.includes('body.surface-solid #main::before')
+      && !/#main::before[\s\S]*background:/.test(files.style),
+  },
+  {
+    name: 'main window native rectangular shadow is disabled for object-style transparency',
+    ok: files.tauri.includes('"transparent": true')
+      && files.tauri.includes('"shadow": false'),
+  },
+  {
+    name: 'Windows transparent compositing avoids backdrop-filter ghosting on clock objects',
+    ok: files.style.includes('body.platform-windows .fc-meta')
+      && files.style.includes('backdrop-filter: none !important'),
+  },
+  {
+    name: 'main hover control strip is removed in favor of native right click and tray menus',
+    ok: !files.index.includes('id="hover-controls"')
+      && !files.main.includes('hoverControls')
+      && !files.main.includes('is-hovering')
+      && !files.style.includes('#hover-controls'),
   },
   {
     name: 'main window starts hidden until frontend hit regions are ready',
@@ -76,14 +100,6 @@ const checks = [
   {
     name: 'context menu opens settings natively instead of bouncing through the webview',
     ok: hasRust(/"context_open_settings"\s*=>\s*\{\s*let _ = open_settings_window\(app\);\s*\}/),
-  },
-  {
-    name: 'hover controls auto-hide even if pointerleave is missed',
-    ok: files.main.includes('let hoverHideTimerId = 0;')
-      && files.main.includes('function scheduleInteractionSurfaceHide')
-      && files.main.includes('function hideInteractionSurfacesNow')
-      && files.main.includes('if (isSurfaceOpen())')
-      && files.main.includes('hideInteractionSurfacesSoon();'),
   },
   {
     name: 'main script is cache-busted so webview upgrades do not run stale interaction code',

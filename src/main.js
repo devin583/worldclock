@@ -78,15 +78,9 @@ const body = document.body;
 const clockBody = document.getElementById('clock-body');
 const objectShell = document.getElementById('object-shell');
 const mainEl = document.getElementById('main');
-const hoverControls = document.getElementById('hover-controls');
 const contextMenu = document.getElementById('context-menu');
 const settingsPanel = document.getElementById('settings-panel');
 const pomodoroStatus = document.getElementById('pomodoro-status');
-const btnLock = document.getElementById('btn-lock');
-const btnOnTop = document.getElementById('btn-ontop');
-const btnPomodoro = document.getElementById('btn-pomodoro');
-const btnSettings = document.getElementById('btn-settings');
-const btnHide = document.getElementById('btn-hide');
 const btnCloseSettings = document.getElementById('btn-close-settings');
 const setOpacity = document.getElementById('set-opacity');
 
@@ -250,7 +244,6 @@ function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
 // ── pomodoro ──────────────────────────────────────────────────────────────
 
 let tickTimerId = null;
-let hoverHideTimerId = 0;
 
 function pomodoroDuration(phase) {
   return (phase === 'break' ? config.pomodoro.breakMinutes : config.pomodoro.focusMinutes) * 60000;
@@ -367,6 +360,12 @@ function applyClockCount(count) {
 function applyOpacity(value) {
   config.opacity = clampNumber(value, 0.72, 1, DEFAULT_CONFIG.opacity);
   body.style.setProperty('--clock-opacity', String(config.opacity));
+  const t = (config.opacity - 0.72) / 0.28;
+  const lerp = (a, b) => a + (b - a) * Math.max(0, Math.min(1, t));
+  body.style.setProperty('--local-dark-transparent', `rgba(6, 8, 12, ${lerp(0.52, 0.74).toFixed(3)})`);
+  body.style.setProperty('--local-dark-solid', `rgba(6, 8, 12, ${lerp(0.78, 0.92).toFixed(3)})`);
+  body.style.setProperty('--local-light-transparent', `rgba(255, 250, 242, ${lerp(0.74, 0.92).toFixed(3)})`);
+  body.style.setProperty('--local-light-solid', `rgba(255, 250, 242, ${lerp(0.90, 1.00).toFixed(3)})`);
   setOpacity.value = String(config.opacity);
   scheduleHitRegionUpdate();
 }
@@ -380,7 +379,6 @@ function applyTimeFormat(value) {
 
 function applyOnTop(enabled) {
   config.on_top = Boolean(enabled);
-  btnOnTop.classList.toggle('active', config.on_top);
   document.getElementById('set-ontop').checked = config.on_top;
   if (isTauri) invoke('set_window_on_top', { enabled: config.on_top });
   syncMenuLabels();
@@ -389,9 +387,6 @@ function applyOnTop(enabled) {
 function applyLock(locked) {
   config.locked = Boolean(locked);
   body.classList.toggle('is-locked', config.locked);
-  btnLock.classList.toggle('locked', config.locked);
-  btnLock.setAttribute('aria-label', config.locked ? '解锁位置' : '锁定位置');
-  btnLock.title = config.locked ? '解锁位置' : '锁定位置';
   if (isTauri) invoke('set_locked', { locked: config.locked });
   syncMenuLabels();
 }
@@ -436,7 +431,6 @@ function syncMenuLabels() {
   document.getElementById('menu-format').textContent = config.timeFormat === '24' ? '切换 12h' : '切换 24h';
   document.getElementById('menu-lock').textContent = config.locked ? '解锁位置' : '锁定位置';
   document.getElementById('menu-ontop').textContent = config.on_top ? '取消置顶' : '始终置顶';
-  btnPomodoro.classList.toggle('active', pomodoroState.running);
 }
 
 // ── floating surfaces ─────────────────────────────────────────────────────
@@ -447,7 +441,6 @@ function isSurfaceOpen() {
 function setSurfaceOpenClass() {
   body.classList.toggle('surface-open', isSurfaceOpen());
   scheduleHitRegionUpdate();
-  if (!isSurfaceOpen()) hideInteractionSurfacesSoon();
 }
 function positionSurface(el, x, y, offset = 10) {
   el.classList.remove('hidden');
@@ -473,9 +466,9 @@ function positionSurface(el, x, y, offset = 10) {
 function closeContextMenu() { contextMenu.classList.add('hidden'); setSurfaceOpenClass(); }
 function closeSettings() { settingsPanel.classList.add('hidden'); setSurfaceOpenClass(); }
 function closeFloatingSurfaces() { closeContextMenu(); closeSettings(); }
-function anchorFromElement(el) {
-  const r = el.getBoundingClientRect();
-  return { x: r.left + r.width / 2, y: r.bottom };
+function clockAnchor() {
+  const r = clockBody.getBoundingClientRect();
+  return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
 function getContextMenuState() {
@@ -596,7 +589,7 @@ async function openContextMenu(event) {
   setSurfaceOpenClass();
 }
 
-async function openSettings(anchor = anchorFromElement(btnSettings)) {
+async function openSettings(anchor = clockAnchor()) {
   if (await openNativeSettingsWindow()) return;
 
   closeContextMenu();
@@ -645,11 +638,11 @@ async function applySettings() {
 // ── interaction ───────────────────────────────────────────────────────────
 
 function isInteractiveTarget(target) {
-  return Boolean(target.closest('button, input, label, #context-menu, #settings-panel, #hover-controls'));
+  return Boolean(target.closest('button, input, label, #context-menu, #settings-panel'));
 }
 function isClockDragTarget(target) {
   return Boolean(target.closest(
-    '#object-shell, .flip-clock, .fc-digit, .fc-meta, .fc-ampm, .analog, .dual, .dl-read, .zone-meta, .wp-pill'
+    '#object-shell, #main, .single-wrap, .dual-both-wrap, .world-pair, .wp-zone, .wp-mid, .flip-clock, .fc-row, .fc-pair, .fc-digit, .fc-meta, .fc-ampm, .analog, .dual, .dl-read, .zone-meta, .wp-pill'
   ));
 }
 function canStartClockDrag(event) {
@@ -660,32 +653,6 @@ function canStartClockDrag(event) {
     && !isInteractiveTarget(event.target)
     && isClockDragTarget(event.target);
 }
-function hideInteractionSurfacesNow() {
-  if (!body.classList.contains('is-hovering')) return;
-  body.classList.remove('is-hovering');
-  scheduleHitRegionUpdate();
-}
-function scheduleInteractionSurfaceHide(delay = 1200) {
-  window.clearTimeout(hoverHideTimerId);
-  hoverHideTimerId = window.setTimeout(() => {
-    hoverHideTimerId = 0;
-    if (isSurfaceOpen()) {
-      scheduleInteractionSurfaceHide(700);
-      return;
-    }
-    hideInteractionSurfacesNow();
-  }, delay);
-}
-function showInteractionSurfaces() {
-  scheduleInteractionSurfaceHide();
-  if (body.classList.contains('is-hovering')) return; // already shown; hit-regions unchanged
-  body.classList.add('is-hovering');
-  scheduleHitRegionUpdate();
-}
-function hideInteractionSurfacesSoon() {
-  scheduleInteractionSurfaceHide(190);
-}
-
 function dragPoint(event) {
   return { screenX: event.screenX, screenY: event.screenY };
 }
@@ -752,7 +719,6 @@ async function endManualDrag(event) {
     console.warn('[manual drag end]', e);
   }
   if (dragUsedManualMove) {
-    hideInteractionSurfacesSoon();
     scheduleHitRegionUpdate();
   }
   dragUsedManualMove = false;
@@ -776,7 +742,6 @@ async function cancelManualDrag() {
 }
 
 function handleClockPointerDown(event) {
-  showInteractionSurfaces();
   if (!canStartClockDrag(event)) return;
 
   event.preventDefault();
@@ -795,26 +760,9 @@ clockBody.addEventListener('contextmenu', openContextMenu);
 clockBody.addEventListener('pointermove', queueManualDragMove);
 clockBody.addEventListener('pointerup', endManualDrag);
 clockBody.addEventListener('pointercancel', endManualDrag);
-clockBody.addEventListener('pointerenter', showInteractionSurfaces);
-clockBody.addEventListener('pointermove', showInteractionSurfaces);
-clockBody.addEventListener('pointerleave', hideInteractionSurfacesSoon);
-objectShell.addEventListener('pointerenter', showInteractionSurfaces);
-objectShell.addEventListener('pointermove', showInteractionSurfaces);
-hoverControls.addEventListener('transitionend', scheduleHitRegionUpdate);
-
-btnSettings.addEventListener('click', () => {
-  if (isTauri) { openSettings(anchorFromElement(btnSettings)); return; }
-  if (settingsPanel.classList.contains('hidden')) openSettings(anchorFromElement(btnSettings));
-  else closeSettings();
-});
 btnCloseSettings.addEventListener('click', closeSettings);
 document.getElementById('btn-cancel').addEventListener('click', closeSettings);
 document.getElementById('btn-apply').addEventListener('click', applySettings);
-
-btnLock.addEventListener('click', async () => { applyLock(!config.locked); await saveConfig(); });
-btnOnTop.addEventListener('click', async () => { applyOnTop(!config.on_top); await saveConfig(); });
-btnPomodoro.addEventListener('click', togglePomodoro);
-btnHide.addEventListener('click', () => { if (isTauri) invoke('hide_window'); });
 
 document.querySelectorAll('input[name="clock-count"]').forEach(i => {
   i.addEventListener('change', syncSettingsClockCountVisibility);
@@ -839,7 +787,7 @@ async function handleContextMenuAction(action, anchor) {
   if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
   if (action === 'toggle-lock') applyLock(!config.locked);
   if (action === 'toggle-ontop') applyOnTop(!config.on_top);
-  if (action === 'open-settings') await openSettings(anchor || anchorFromElement(btnSettings));
+  if (action === 'open-settings') await openSettings(anchor || clockAnchor());
   if (action !== 'open-settings') closeContextMenu();
   await saveConfig();
 }
@@ -850,7 +798,7 @@ contextMenu.addEventListener('click', async event => {
 });
 
 document.addEventListener('pointerdown', event => {
-  const inside = event.target.closest('#context-menu, #settings-panel, #hover-controls, #object-shell');
+  const inside = event.target.closest('#context-menu, #settings-panel, #object-shell');
   if (!inside) closeFloatingSurfaces();
 });
 document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFloatingSurfaces(); });
@@ -927,20 +875,15 @@ function collectClockObjectRegions(regions, scale) {
 
 function collectHitRegions() {
   const scale = window.devicePixelRatio || 1;
-  const isSolid = body.classList.contains('surface-solid');
 
   const regions = [];
 
-  // In solid mode the visible object is the whole backing plate. In transparent
-  // mode, keep desktop-pet behavior: only visible clock parts receive hits.
+  // Desktop-object behavior: only visible clock parts receive hits. Avoid a
+  // stretched rectangular window region because it leaves artifacts on Win11.
   const clockRect = mainEl.getBoundingClientRect();
-  if (isSolid && clockRect.width > 2 && clockRect.height > 2) {
-    pushRegion(regions, clockRect, scale, 28, 28);
-  } else {
-    collectClockObjectRegions(regions, scale);
-    if (!regions.length && clockRect.width > 2 && clockRect.height > 2) {
-      pushRegion(regions, clockRect, scale, 8, 14);
-    }
+  collectClockObjectRegions(regions, scale);
+  if (!regions.length && clockRect.width > 2 && clockRect.height > 2) {
+    pushRegion(regions, clockRect, scale, 8, 14);
   }
 
   // control surfaces
@@ -987,7 +930,7 @@ if (isTauri) {
   listen('tray-set-theme', async e => { applyTheme(e.payload); await saveConfig(); });
   listen('tray-set-ontop', async e => { applyOnTop(Boolean(e.payload)); await saveConfig(); });
   listen('context-menu-action', async e => {
-    await handleContextMenuAction(String(e.payload || ''), anchorFromElement(btnSettings));
+    await handleContextMenuAction(String(e.payload || ''), clockAnchor());
   });
   listen('config-updated', async e => {
     config = normalizeConfig(e.payload);
