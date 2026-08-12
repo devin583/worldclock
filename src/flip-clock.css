@@ -20,7 +20,7 @@
   --digit: #f5f3ee; --seam: rgba(0,0,0,.52);
   --shadow: 0 8px 18px rgba(0,0,0,.35);
   --edge: rgba(255,255,255,.10);
-  --font: "Archivo", system-ui, sans-serif;
+  --font: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --meta: rgba(255,255,255,.94);
   --meta-bg: rgba(6,8,12,.78);
   --meta-border: rgba(255,255,255,.16);
@@ -159,7 +159,7 @@
   --digit: #f5f3ee; --seam: rgba(0,0,0,.52);
   --shadow: 0 8px 18px rgba(0,0,0,.35);
   --edge: rgba(255,255,255,.10);
-  --font: "Archivo", system-ui, sans-serif;
+  --font: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --meta: rgba(255,255,255,.92);
   --meta-bg: rgba(6,8,12,.84);
   --meta-border: rgba(255,255,255,.16);
@@ -175,7 +175,7 @@
   --digit: #232220; --seam: rgba(0,0,0,.10);
   --shadow: 0 10px 24px rgba(0,0,0,.26);
   --edge: rgba(35,34,32,.18);
-  --font: "Manrope", system-ui, sans-serif;
+  --font: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --meta: rgba(35,34,32,.92);
   --meta-bg: rgba(255,250,242,.98);
   --meta-border: rgba(40,34,28,.18);
@@ -194,7 +194,7 @@
   --digit: #422719; --seam: rgba(110,65,35,.30);
   --shadow: 0 10px 24px rgba(74,43,24,.28);
   --edge: rgba(110,65,35,.20);
-  --font: "Fredoka", system-ui, sans-serif;
+  --font: "Segoe UI Rounded", "Segoe UI", system-ui, sans-serif;
   --meta: #4c2f20;
   --meta-bg: rgba(255,247,238,.98);
   --meta-border: rgba(110,65,35,.18);
@@ -226,7 +226,7 @@
   --digit: #ffffff; --seam: rgba(0,0,0,.32);
   --shadow: 0 8px 18px rgba(0,0,0,.34);
   --edge: rgba(255,255,255,.22);
-  --font: "Manrope", system-ui, sans-serif;
+  --font: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --meta: rgba(255,255,255,.92);
   --meta-bg: rgba(6,8,12,.84);
   --meta-border: rgba(255,255,255,.22);

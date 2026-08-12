@@ -4,8 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock Settings</title>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="settings.css?v=object-shell-0317" />
+  <link rel="stylesheet" href="settings.css?v=0400" />
 </head>
 <body>
   <main class="settings-shell">
@@ -20,30 +19,34 @@
     <section class="settings-content">
       <div class="group">
         <h2>显示</h2>
-        <label>时钟数量</label>
+        <fieldset>
+        <legend>时钟数量</legend>
         <div class="segmented">
           <label><input type="radio" name="clock-count" value="1" /> 单时钟</label>
           <label><input type="radio" name="clock-count" value="2" /> 双时钟</label>
         </div>
+        </fieldset>
 
-        <label>显示模式</label>
+        <fieldset>
+        <legend>显示模式</legend>
         <div class="segmented">
           <label><input type="radio" name="mode" value="digital" /> 数字</label>
           <label><input type="radio" name="mode" value="analog" /> 指针</label>
           <label><input type="radio" name="mode" value="both" /> 双显</label>
         </div>
+        </fieldset>
       </div>
 
       <div class="group">
         <h2>时区</h2>
         <label for="set-label-1">时钟 1 城市名</label>
-        <input type="text" id="set-label-1" autocomplete="off" />
+        <input type="text" id="set-label-1" maxlength="40" autocomplete="off" />
         <label for="set-tz-1">时钟 1 时区</label>
         <input type="text" id="set-tz-1" list="timezone-options" autocomplete="off" />
 
         <div id="clock-2-settings">
           <label for="set-label-2">时钟 2 城市名</label>
-          <input type="text" id="set-label-2" autocomplete="off" />
+          <input type="text" id="set-label-2" maxlength="40" autocomplete="off" />
           <label for="set-tz-2">时钟 2 时区</label>
           <input type="text" id="set-tz-2" list="timezone-options" autocomplete="off" />
         </div>
@@ -52,19 +55,23 @@
 
       <div class="group">
         <h2>外观</h2>
-        <label>主题</label>
+        <fieldset>
+        <legend>主题</legend>
         <div class="grid-options">
           <label><input type="radio" name="theme" value="classic" /> Classic</label>
           <label><input type="radio" name="theme" value="minimal" /> Minimal</label>
           <label><input type="radio" name="theme" value="cute" /> Cute</label>
           <label><input type="radio" name="theme" value="glass" /> Glass</label>
         </div>
+        </fieldset>
 
-        <label>背景样式</label>
+        <fieldset>
+        <legend>背景样式</legend>
         <div class="segmented">
           <label><input type="radio" name="surface-style" value="transparent" /> 透明物件</label>
           <label><input type="radio" name="surface-style" value="solid" /> 局部底色</label>
         </div>
+        </fieldset>
 
         <label for="set-opacity">局部透明度</label>
         <input type="range" id="set-opacity" min="0.72" max="1" step="0.04" />
@@ -72,11 +79,17 @@
 
       <div class="group">
         <h2>交互</h2>
-        <label>时间格式</label>
+        <fieldset>
+        <legend>时间格式与精度</legend>
         <div class="segmented">
           <label><input type="radio" name="time-format" value="24" /> 24h</label>
           <label><input type="radio" name="time-format" value="12" /> 12h</label>
         </div>
+        <label class="toggle-row">
+          <input type="checkbox" id="set-show-seconds" />
+          <span>显示秒（耗电更高）</span>
+        </label>
+        </fieldset>
 
         <label class="toggle-row">
           <input type="checkbox" id="set-locked" />
@@ -110,6 +123,7 @@
     </footer>
   </main>
 
-  <script src="settings.js?v=object-shell-0317"></script>
+  <script src="config.js?v=0400"></script>
+  <script src="settings.js?v=0400"></script>
 </body>
 </html>

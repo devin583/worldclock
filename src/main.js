@@ -7,65 +7,35 @@ const tauriInvoke = tauriApi.core?.invoke;
 const tauriListen = tauriApi.event?.listen;
 const isTauri = typeof tauriInvoke === 'function';
 const isWindows = /Windows/i.test(navigator.userAgent);
+const Config = window.WCConfig;
+
+if (!Config) throw new Error('config.js must load before main.js');
+
+const {
+  DEFAULT_CONFIG,
+  MODE_VALUES,
+  SURFACE_STYLE_VALUES,
+  THEME_VALUES,
+  TIMEZONES,
+  clampNumber,
+  normalizeClockCount,
+  normalizeConfig,
+  normalizeMode,
+  normalizePomodoro,
+  normalizeSurfaceStyle,
+  normalizeTheme,
+  normalizeTimeFormat,
+  resolveTimezone,
+  shouldFitWindow,
+} = Config;
+const THEME_CLASSES = THEME_VALUES.map((theme) => `theme-${theme}`);
+const SURFACE_STYLE_CLASSES = SURFACE_STYLE_VALUES.map((style) => `surface-${style}`);
 
 const invoke = isTauri
-  ? async (cmd, args) => {
-      try { return await tauriInvoke(cmd, args); }
-      catch (e) { console.warn('[invoke]', cmd, e); return null; }
-    }
+  ? async (cmd, args) => tauriInvoke(cmd, args)
   : async (cmd, args) => { console.log('[invoke noop]', cmd, args); return null; };
 
 const listen = typeof tauriListen === 'function' ? tauriListen : async () => () => {};
-
-const TIMEZONES = [
-  'Europe/Budapest','Europe/London','Europe/Paris','Europe/Berlin','Europe/Rome',
-  'Europe/Madrid','Europe/Warsaw','Europe/Kiev','Europe/Moscow','Europe/Istanbul',
-  'Asia/Shanghai','Asia/Tokyo','Asia/Seoul','Asia/Singapore','Asia/Hong_Kong',
-  'Asia/Kolkata','Asia/Dubai','Asia/Karachi','Asia/Bangkok','Asia/Jakarta',
-  'America/New_York','America/Chicago','America/Denver','America/Los_Angeles',
-  'America/Toronto','America/Sao_Paulo','America/Buenos_Aires','America/Mexico_City',
-  'Pacific/Auckland','Pacific/Sydney','Pacific/Honolulu',
-  'Africa/Cairo','Africa/Lagos','Africa/Nairobi',
-  'Atlantic/Reykjavik','UTC',
-];
-
-const THEME_VALUES = ['classic', 'minimal', 'cute', 'glass'];
-const THEME_CLASSES = THEME_VALUES.map(t => `theme-${t}`);
-const LEGACY_THEME_MAP = {
-  'minimal-glass': 'glass',
-  'mechanical': 'classic',
-  'soft-companion': 'cute',
-  'flip': 'classic',
-  'boundless': 'minimal',
-  'dark': 'classic',
-  'light': 'minimal',
-  'classic': 'classic',
-  'glass-pet': 'glass',
-  'moon-cat': 'cute',
-  'pixel-buddy': 'classic',
-};
-const SURFACE_STYLE_VALUES = ['transparent', 'solid'];
-const SURFACE_STYLE_CLASSES = SURFACE_STYLE_VALUES.map(s => `surface-${s}`);
-const MODE_VALUES = ['digital', 'analog', 'both'];
-const TIME_FORMAT_VALUES = ['24', '12'];
-
-const DEFAULT_CONFIG = {
-  clocks: [
-    { label: 'Budapest', tz: 'Europe/Budapest' },
-    { label: 'Beijing', tz: 'Asia/Shanghai' },
-  ],
-  clockCount: 2,
-  mode: 'digital',
-  locked: false,
-  on_top: true,
-  theme: 'classic',
-  surfaceStyle: 'transparent',
-  surfaceStyleExplicit: false,
-  timeFormat: '24',
-  opacity: 0.88,
-  autostart: false,
-  pomodoro: { focusMinutes: 25, breakMinutes: 5 },
-};
 
 let config = normalizeConfig();
 let hitRegionFrame = 0;
@@ -73,6 +43,8 @@ let dragPointerId = null;
 let dragFrame = 0;
 let dragLastPoint = null;
 let dragUsedManualMove = false;
+let lastFocusedElement = null;
+const unlistenCallbacks = [];
 
 const body = document.body;
 const clockBody = document.getElementById('clock-body');
@@ -83,61 +55,12 @@ const settingsPanel = document.getElementById('settings-panel');
 const pomodoroStatus = document.getElementById('pomodoro-status');
 const btnCloseSettings = document.getElementById('btn-close-settings');
 const setOpacity = document.getElementById('set-opacity');
+const setShowSeconds = document.getElementById('set-show-seconds');
 
 const pomodoroState = { phase: 'idle', running: false, durationMs: 0, remainingMs: 0, endAt: 0 };
 
 body.classList.toggle('platform-windows', isWindows);
 
-// ── normalise ─────────────────────────────────────────────────────────────
-
-function clampNumber(v, min, max, fb) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fb;
-}
-
-function normalizeTheme(t) {
-  const next = LEGACY_THEME_MAP[t] || t;
-  return THEME_VALUES.includes(next) ? next : DEFAULT_CONFIG.theme;
-}
-function normalizeMode(m) { return MODE_VALUES.includes(m) ? m : DEFAULT_CONFIG.mode; }
-function normalizeSurfaceStyle(s) { return SURFACE_STYLE_VALUES.includes(s) ? s : DEFAULT_CONFIG.surfaceStyle; }
-function normalizeTimeFormat(v) { return TIME_FORMAT_VALUES.includes(String(v)) ? String(v) : DEFAULT_CONFIG.timeFormat; }
-function normalizeClockCount(v) { return Number(v) === 1 ? 1 : 2; }
-function normalizeClock(c, fb) {
-  return {
-    label: typeof c?.label === 'string' && c.label.trim() ? c.label.trim() : fb.label,
-    tz: TIMEZONES.includes(c?.tz) ? c.tz : fb.tz,
-  };
-}
-function normalizePomodoro(v = {}) {
-  return {
-    focusMinutes: clampNumber(v.focusMinutes, 1, 120, DEFAULT_CONFIG.pomodoro.focusMinutes),
-    breakMinutes: clampNumber(v.breakMinutes, 1, 60, DEFAULT_CONFIG.pomodoro.breakMinutes),
-  };
-}
-function normalizeConfig(saved = {}) {
-  const src = saved && typeof saved === 'object' ? saved : {};
-  const savedClocks = Array.isArray(src.clocks) ? src.clocks : [];
-  const surfaceStyleExplicit = src.surfaceStyleExplicit === true;
-  return {
-    ...DEFAULT_CONFIG, ...src,
-    clocks: [
-      normalizeClock(savedClocks[0], DEFAULT_CONFIG.clocks[0]),
-      normalizeClock(savedClocks[1], DEFAULT_CONFIG.clocks[1]),
-    ],
-    clockCount: normalizeClockCount(src.clockCount ?? DEFAULT_CONFIG.clockCount),
-    mode: normalizeMode(src.mode),
-    theme: normalizeTheme(src.theme),
-    surfaceStyle: surfaceStyleExplicit ? normalizeSurfaceStyle(src.surfaceStyle) : DEFAULT_CONFIG.surfaceStyle,
-    surfaceStyleExplicit,
-    timeFormat: normalizeTimeFormat(src.timeFormat),
-    opacity: clampNumber(src.opacity, 0.72, 1, DEFAULT_CONFIG.opacity),
-    locked: Boolean(src.locked),
-    on_top: src.on_top !== false,
-    autostart: Boolean(src.autostart),
-    pomodoro: normalizePomodoro(src.pomodoro),
-  };
-}
 function activeClockCount() { return normalizeClockCount(config.clockCount); }
 
 // ── clock component builder ───────────────────────────────────────────────
@@ -155,6 +78,8 @@ function buildClocks() {
   const variant = config.theme; // classic | minimal | cute | glass
   const lang = 'zh';
   const hour12 = config.timeFormat === '12';
+  body.classList.toggle('shows-seconds', config.showSeconds);
+  body.classList.toggle('hides-seconds', !config.showSeconds);
 
   if (count === 1) {
     buildSingleClock(mode, variant, lang, hour12, config.clocks[0]);
@@ -173,7 +98,7 @@ function buildSingleClock(mode, variant, lang, hour12, clock) {
 
     const a = document.createElement('analog-clock');
     a.setAttribute('variant', scheme);
-    a.setAttribute('seconds', '');
+    if (config.showSeconds) a.setAttribute('seconds', '');
     if (clock.tz) a.setAttribute('tz', clock.tz);
     a.style.cssText = '--size:180px';
     wrap.appendChild(a);
@@ -194,13 +119,14 @@ function buildSingleClock(mode, variant, lang, hour12, clock) {
     d.setAttribute('meta', 'weekday,date,location');
     d.setAttribute('location', clock.label);
     d.setAttribute('lang', lang);
+    if (config.showSeconds) d.setAttribute('seconds', '');
     if (hour12) d.setAttribute('hour12', '');
     mainEl.appendChild(d);
   } else {
     // digital
     const f = document.createElement('flip-clock');
     f.setAttribute('variant', variant);
-    f.setAttribute('fields', 'hms');
+    f.setAttribute('fields', config.showSeconds ? 'hms' : 'hm');
     if (clock.tz) f.setAttribute('tz', clock.tz);
     f.setAttribute('meta', 'weekday,date,location');
     f.setAttribute('location', clock.label);
@@ -223,20 +149,24 @@ function buildDualClock(mode, variant, lang, hour12, clockA, clockB) {
       d.setAttribute('meta', 'weekday,date,location');
       d.setAttribute('location', clock.label);
       d.setAttribute('lang', lang);
+      if (config.showSeconds) d.setAttribute('seconds', '');
       if (hour12) d.setAttribute('hour12', '');
       wrap.appendChild(d);
     });
     mainEl.appendChild(wrap);
   } else {
     const wp = document.createElement('world-pair');
-    wp.setAttribute('type', mode === 'analog' ? 'analog' : 'digital');
-    wp.setAttribute('layout', 'row');
-    wp.setAttribute('variant', scheme);
-    wp.setAttribute('lang', lang);
-    wp.setAttribute('a-tz', clockA.tz);
-    wp.setAttribute('a-label', clockA.label);
-    wp.setAttribute('b-tz', clockB.tz);
-    wp.setAttribute('b-label', clockB.label);
+    window.WCWorldClock.configureWorldPair(wp, {
+      type: mode === 'analog' ? 'analog' : 'digital',
+      layout: 'row',
+      variant,
+      colorScheme: scheme,
+      lang,
+      clockA,
+      clockB,
+      showSeconds: config.showSeconds,
+      hour12,
+    });
     mainEl.appendChild(wp);
   }
 }
@@ -262,24 +192,28 @@ function startPomodoro(phase = 'focus') {
   Object.assign(pomodoroState, { phase, running: true, durationMs, remainingMs: durationMs, endAt: Date.now() + durationMs });
   body.classList.remove('pomodoro-done');
   updatePomodoro();
+  startClock();
 }
 function pausePomodoro() {
   if (!pomodoroState.running) return;
   pomodoroState.remainingMs = Math.max(0, pomodoroState.endAt - Date.now());
   pomodoroState.running = false; pomodoroState.endAt = 0;
   updatePomodoro();
+  stopClock();
 }
 function resumePomodoro() {
   if (pomodoroState.phase === 'idle' || pomodoroState.remainingMs <= 0) { startPomodoro('focus'); return; }
   pomodoroState.running = true;
   pomodoroState.endAt = Date.now() + pomodoroState.remainingMs;
   updatePomodoro();
+  startClock();
 }
 function resetPomodoro() {
   Object.assign(pomodoroState, { phase: 'idle', running: false, durationMs: 0, remainingMs: 0, endAt: 0 });
   body.classList.remove('pomodoro-active', 'pomodoro-paused', 'pomodoro-done');
   body.style.setProperty('--progress', '0deg');
   setPomodoroStatus(''); syncMenuLabels();
+  stopClock();
 }
 function togglePomodoro() {
   if (pomodoroState.running) pausePomodoro(); else resumePomodoro();
@@ -292,6 +226,7 @@ function completePomodoro() {
   body.classList.add('pomodoro-done');
   body.style.setProperty('--progress', '360deg');
   setPomodoroStatus(wasFocus ? '专注完成' : '休息完成');
+  stopClock();
   window.setTimeout(() => body.classList.remove('pomodoro-done'), 1200);
   syncMenuLabels();
 }
@@ -313,30 +248,38 @@ function tick() {
   if (!document.hidden) updatePomodoro();
 }
 function startClock() {
-  if (tickTimerId !== null) return;
-  tickTimerId = window.setInterval(tick, 1000);
+  if (tickTimerId !== null || !pomodoroState.running || document.hidden) return;
+  const schedule = () => {
+    if (!pomodoroState.running || document.hidden) { tickTimerId = null; return; }
+    tick();
+    const delay = Math.max(100, 1000 - (Date.now() % 1000));
+    tickTimerId = window.setTimeout(schedule, delay);
+  };
+  schedule();
 }
 function stopClock() {
   if (tickTimerId === null) return;
-  window.clearInterval(tickTimerId); tickTimerId = null;
+  window.clearTimeout(tickTimerId); tickTimerId = null;
 }
-document.addEventListener('visibilitychange', () => { if (document.hidden) stopClock(); else startClock(); });
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopClock();
+  else if (pomodoroState.running) startClock();
+});
 
 // ── apply functions ───────────────────────────────────────────────────────
 
-function applyMode(mode) {
+function applyMode(mode, options = {}) {
   config.mode = normalizeMode(mode);
   document.querySelectorAll('input[name="mode"]').forEach(i => { i.checked = i.value === config.mode; });
-  buildClocks();
+  if (options.rebuild !== false) buildClocks();
 }
 
-function applyTheme(theme) {
+function applyTheme(theme, options = {}) {
   config.theme = normalizeTheme(theme);
   body.classList.remove(...THEME_CLASSES);
   body.classList.add(`theme-${config.theme}`);
   document.querySelectorAll('input[name="theme"]').forEach(i => { i.checked = i.value === config.theme; });
-  if (isTauri) invoke('set_theme', { theme: config.theme });
-  buildClocks();
+  if (options.rebuild !== false) buildClocks();
 }
 
 function applySurfaceStyle(style, options = {}) {
@@ -348,13 +291,13 @@ function applySurfaceStyle(style, options = {}) {
   scheduleHitRegionUpdate();
 }
 
-function applyClockCount(count) {
+function applyClockCount(count, options = {}) {
   config.clockCount = normalizeClockCount(count);
   body.classList.toggle('clock-count-1', config.clockCount === 1);
   body.classList.toggle('clock-count-2', config.clockCount === 2);
   document.querySelectorAll('input[name="clock-count"]').forEach(i => { i.checked = Number(i.value) === config.clockCount; });
   syncSettingsClockCountVisibility();
-  buildClocks();
+  if (options.rebuild !== false) buildClocks();
 }
 
 function applyOpacity(value) {
@@ -370,39 +313,126 @@ function applyOpacity(value) {
   scheduleHitRegionUpdate();
 }
 
-function applyTimeFormat(value) {
+function applyTimeFormat(value, options = {}) {
   config.timeFormat = normalizeTimeFormat(value);
   document.querySelectorAll('input[name="time-format"]').forEach(i => { i.checked = i.value === config.timeFormat; });
   syncMenuLabels();
-  buildClocks();
+  if (options.rebuild !== false) buildClocks();
+}
+
+function applyShowSeconds(enabled, options = {}) {
+  config.showSeconds = Boolean(enabled);
+  setShowSeconds.checked = config.showSeconds;
+  if (options.rebuild !== false) buildClocks();
 }
 
 function applyOnTop(enabled) {
   config.on_top = Boolean(enabled);
   document.getElementById('set-ontop').checked = config.on_top;
-  if (isTauri) invoke('set_window_on_top', { enabled: config.on_top });
   syncMenuLabels();
 }
 
 function applyLock(locked) {
   config.locked = Boolean(locked);
   body.classList.toggle('is-locked', config.locked);
-  if (isTauri) invoke('set_locked', { locked: config.locked });
   syncMenuLabels();
+}
+
+function renderConfig(next) {
+  config = normalizeConfig(next);
+  applyTheme(config.theme, { rebuild: false });
+  applySurfaceStyle(config.surfaceStyle);
+  applyClockCount(config.clockCount, { rebuild: false });
+  applyMode(config.mode, { rebuild: false });
+  applyTimeFormat(config.timeFormat, { rebuild: false });
+  applyShowSeconds(config.showSeconds, { rebuild: false });
+  applyOpacity(config.opacity);
+  applyLock(config.locked);
+  applyOnTop(config.on_top);
+  buildClocks();
 }
 
 // ── settings ──────────────────────────────────────────────────────────────
 
-async function saveConfig() {
+async function saveConfig(next = config) {
   if (!isTauri) return;
-  try { await invoke('save_config', { data: config }); }
-  catch (e) { console.error('saveConfig', e); }
+  await invoke('save_config', { data: normalizeConfig(next) });
 }
 
 async function loadConfig() {
   if (!isTauri) return;
-  try { config = normalizeConfig(await invoke('load_config')); }
-  catch (e) { console.error('loadConfig', e); }
+  config = normalizeConfig(await invoke('load_config'));
+  const actualAutostart = await invoke('get_autostart');
+  if (typeof actualAutostart === 'boolean') config.autostart = actualAutostart;
+}
+
+async function syncNativePreferences(previous, next, options = {}) {
+  if (!isTauri) return async () => {};
+  const force = options.force === true;
+  const shouldFit = options.fit === true;
+  const rollbacks = [];
+  const applyChange = async (command, nextArgs, previousArgs, changed) => {
+    if (!changed) return;
+    rollbacks.push(async () => invoke(command, previousArgs));
+    await invoke(command, nextArgs);
+  };
+  const rollback = async () => {
+    for (const undo of rollbacks.reverse()) {
+      try { await undo(); } catch (error) { console.error('[config rollback]', error); }
+    }
+  };
+
+  try {
+    const originalBounds = shouldFit
+      ? await invoke('get_main_window_bounds')
+      : null;
+    await applyChange(
+      'set_theme', { theme: next.theme }, { theme: previous.theme },
+      force || previous.theme !== next.theme,
+    );
+    await applyChange(
+      'set_window_on_top', { enabled: next.on_top }, { enabled: previous.on_top },
+      force || previous.on_top !== next.on_top,
+    );
+    await applyChange(
+      'set_locked', { locked: next.locked }, { locked: previous.locked },
+      force || previous.locked !== next.locked,
+    );
+    await applyChange(
+      'set_autostart', { enabled: next.autostart }, { enabled: previous.autostart },
+      previous.autostart !== next.autostart,
+    );
+    if (shouldFit) {
+      // Register the exact rollback before fitting: the native command can resize
+      // successfully and still fail while persisting its new window state.
+      rollbacks.push(async () => invoke('restore_main_window_bounds', { bounds: originalBounds }));
+      await invoke('fit_window_to_layout', {
+        clockCount: next.clockCount,
+        mode: next.mode,
+        showSeconds: next.showSeconds,
+      });
+    }
+    return rollback;
+  } catch (error) {
+    await rollback();
+    throw error;
+  }
+}
+
+async function commitConfig(next, options = {}) {
+  const previous = normalizeConfig(config);
+  const normalized = normalizeConfig(next);
+  let rollback = async () => {};
+  try {
+    rollback = await syncNativePreferences(previous, normalized, options);
+    await saveConfig(normalized);
+  } catch (error) {
+    await rollback();
+    renderConfig(previous);
+    throw error;
+  }
+  renderConfig(normalized);
+  return normalized;
 }
 
 function populateTimezoneOptions() {
@@ -410,14 +440,6 @@ function populateTimezoneOptions() {
   if (!dl) return;
   dl.innerHTML = '';
   TIMEZONES.forEach(tz => { const o = document.createElement('option'); o.value = tz; dl.appendChild(o); });
-}
-
-function resolveTimezone(value, fallback) {
-  const q = value.trim().toLowerCase();
-  if (!q) return fallback;
-  return TIMEZONES.find(tz => tz.toLowerCase() === q)
-    || TIMEZONES.find(tz => tz.toLowerCase().includes(q))
-    || fallback;
 }
 
 function syncSettingsClockCountVisibility() {
@@ -464,7 +486,14 @@ function positionSurface(el, x, y, offset = 10) {
   setSurfaceOpenClass();
 }
 function closeContextMenu() { contextMenu.classList.add('hidden'); setSurfaceOpenClass(); }
-function closeSettings() { settingsPanel.classList.add('hidden'); setSurfaceOpenClass(); }
+function closeSettings() {
+  if (settingsPanel.classList.contains('hidden')) return;
+  settingsPanel.classList.add('hidden');
+  clockBody.inert = false;
+  setSurfaceOpenClass();
+  if (lastFocusedElement?.isConnected) lastFocusedElement.focus();
+  lastFocusedElement = null;
+}
 function closeFloatingSurfaces() { closeContextMenu(); closeSettings(); }
 function clockAnchor() {
   const r = clockBody.getBoundingClientRect();
@@ -593,6 +622,7 @@ async function openSettings(anchor = clockAnchor()) {
   if (await openNativeSettingsWindow()) return;
 
   closeContextMenu();
+  lastFocusedElement = document.activeElement;
   populateTimezoneOptions();
   document.getElementById('set-label-1').value = config.clocks[0].label;
   document.getElementById('set-label-2').value = config.clocks[1].label;
@@ -605,34 +635,57 @@ async function openSettings(anchor = clockAnchor()) {
   document.querySelectorAll('input[name="theme"]').forEach(i => { i.checked = i.value === config.theme; });
   document.querySelectorAll('input[name="surface-style"]').forEach(i => { i.checked = i.value === config.surfaceStyle; });
   document.querySelectorAll('input[name="time-format"]').forEach(i => { i.checked = i.value === config.timeFormat; });
+  setShowSeconds.checked = config.showSeconds;
   document.getElementById('set-ontop').checked = config.on_top;
   document.getElementById('set-autostart').checked = config.autostart;
   applyOpacity(config.opacity);
   syncSettingsClockCountVisibility();
   positionSurface(settingsPanel, anchor.x, anchor.y, 8);
+  clockBody.inert = true;
+  settingsPanel.querySelector('input, button')?.focus();
 }
 
 async function applySettings() {
-  applyClockCount(document.querySelector('input[name="clock-count"]:checked')?.value ?? config.clockCount);
-  applyMode(document.querySelector('input[name="mode"]:checked')?.value ?? config.mode);
-  config.clocks[0].label = document.getElementById('set-label-1').value.trim() || 'Clock 1';
-  config.clocks[0].tz = resolveTimezone(document.getElementById('set-tz-1').value, config.clocks[0].tz);
-  config.clocks[1].label = document.getElementById('set-label-2').value.trim() || 'Clock 2';
-  config.clocks[1].tz = resolveTimezone(document.getElementById('set-tz-2').value, config.clocks[1].tz);
-  applyTheme(document.querySelector('input[name="theme"]:checked')?.value ?? config.theme);
-  applySurfaceStyle(document.querySelector('input[name="surface-style"]:checked')?.value ?? config.surfaceStyle, { explicit: true });
-  applyTimeFormat(document.querySelector('input[name="time-format"]:checked')?.value ?? config.timeFormat);
-  applyOpacity(document.getElementById('set-opacity').value);
-  applyOnTop(document.getElementById('set-ontop').checked);
-  config.autostart = document.getElementById('set-autostart').checked;
-  config.pomodoro = normalizePomodoro({
-    focusMinutes: document.getElementById('set-focus-minutes').value,
-    breakMinutes: document.getElementById('set-break-minutes').value,
+  const button = document.getElementById('btn-apply');
+  const next = normalizeConfig({
+    ...config,
+    clockCount: document.querySelector('input[name="clock-count"]:checked')?.value,
+    mode: document.querySelector('input[name="mode"]:checked')?.value,
+    showSeconds: setShowSeconds.checked,
+    clocks: [
+      {
+        label: document.getElementById('set-label-1').value,
+        tz: resolveTimezone(document.getElementById('set-tz-1').value, config.clocks[0].tz),
+      },
+      {
+        label: document.getElementById('set-label-2').value,
+        tz: resolveTimezone(document.getElementById('set-tz-2').value, config.clocks[1].tz),
+      },
+    ],
+    theme: document.querySelector('input[name="theme"]:checked')?.value,
+    surfaceStyle: document.querySelector('input[name="surface-style"]:checked')?.value,
+    surfaceStyleExplicit: true,
+    timeFormat: document.querySelector('input[name="time-format"]:checked')?.value,
+    opacity: document.getElementById('set-opacity').value,
+    on_top: document.getElementById('set-ontop').checked,
+    autostart: document.getElementById('set-autostart').checked,
+    pomodoro: normalizePomodoro({
+      focusMinutes: document.getElementById('set-focus-minutes').value,
+      breakMinutes: document.getElementById('set-break-minutes').value,
+    }),
   });
-  if (isTauri) invoke('set_autostart', { enabled: config.autostart });
-  buildClocks();
-  await saveConfig();
-  closeSettings();
+  const shouldFit = shouldFitWindow(config, next);
+  button.disabled = true;
+  try {
+    await commitConfig(next, { fit: shouldFit });
+    closeSettings();
+  } catch (error) {
+    console.error('[settings] apply failed', error);
+    setPomodoroStatus(`设置未保存：${String(error).slice(0, 64)}`);
+    settingsPanel.focus();
+  } finally {
+    button.disabled = false;
+  }
 }
 
 // ── interaction ───────────────────────────────────────────────────────────
@@ -771,25 +824,35 @@ setOpacity.addEventListener('input', () => applyOpacity(setOpacity.value));
 
 async function handleContextMenuAction(action, anchor) {
   if (!action) return;
-  if (action === 'toggle-pomodoro') togglePomodoro();
-  if (action === 'reset-pomodoro') resetPomodoro();
-  if (action === 'set-count-single') applyClockCount(1);
-  if (action === 'set-count-dual') applyClockCount(2);
-  if (action === 'set-mode-digital') applyMode('digital');
-  if (action === 'set-mode-analog') applyMode('analog');
-  if (action === 'set-mode-both') applyMode('both');
-  if (action === 'set-theme-classic') applyTheme('classic');
-  if (action === 'set-theme-minimal') applyTheme('minimal');
-  if (action === 'set-theme-cute') applyTheme('cute');
-  if (action === 'set-theme-glass') applyTheme('glass');
-  if (action === 'set-surface-transparent') applySurfaceStyle('transparent', { explicit: true });
-  if (action === 'set-surface-solid') applySurfaceStyle('solid', { explicit: true });
-  if (action === 'toggle-time-format') applyTimeFormat(config.timeFormat === '24' ? '12' : '24');
-  if (action === 'toggle-lock') applyLock(!config.locked);
-  if (action === 'toggle-ontop') applyOnTop(!config.on_top);
-  if (action === 'open-settings') await openSettings(anchor || clockAnchor());
-  if (action !== 'open-settings') closeContextMenu();
-  await saveConfig();
+  if (action === 'toggle-pomodoro') { togglePomodoro(); closeContextMenu(); return; }
+  if (action === 'reset-pomodoro') { resetPomodoro(); closeContextMenu(); return; }
+  if (action === 'open-settings') { await openSettings(anchor || clockAnchor()); return; }
+
+  const next = normalizeConfig(config);
+  let fit = false;
+  if (action === 'set-count-single') { next.clockCount = 1; fit = true; }
+  if (action === 'set-count-dual') { next.clockCount = 2; fit = true; }
+  if (action === 'set-mode-digital') { next.mode = 'digital'; fit = true; }
+  if (action === 'set-mode-analog') { next.mode = 'analog'; fit = true; }
+  if (action === 'set-mode-both') { next.mode = 'both'; fit = true; }
+  if (action === 'set-theme-classic') next.theme = 'classic';
+  if (action === 'set-theme-minimal') next.theme = 'minimal';
+  if (action === 'set-theme-cute') next.theme = 'cute';
+  if (action === 'set-theme-glass') next.theme = 'glass';
+  if (action === 'set-surface-transparent') { next.surfaceStyle = 'transparent'; next.surfaceStyleExplicit = true; }
+  if (action === 'set-surface-solid') { next.surfaceStyle = 'solid'; next.surfaceStyleExplicit = true; }
+  if (action === 'toggle-time-format') next.timeFormat = config.timeFormat === '24' ? '12' : '24';
+  if (action === 'toggle-lock') next.locked = !config.locked;
+  if (action === 'toggle-ontop') next.on_top = !config.on_top;
+
+  try {
+    await commitConfig(next, { fit });
+  } catch (error) {
+    console.error('[menu] action failed', action, error);
+    setPomodoroStatus(`操作失败：${String(error).slice(0, 64)}`);
+  } finally {
+    closeContextMenu();
+  }
 }
 
 contextMenu.addEventListener('click', async event => {
@@ -801,7 +864,20 @@ document.addEventListener('pointerdown', event => {
   const inside = event.target.closest('#context-menu, #settings-panel, #object-shell');
   if (!inside) closeFloatingSurfaces();
 });
-document.addEventListener('keydown', event => { if (event.key === 'Escape') closeFloatingSurfaces(); });
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') { closeFloatingSurfaces(); return; }
+  if (event.key !== 'Tab' || settingsPanel.classList.contains('hidden')) return;
+  const focusable = [...settingsPanel.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+    .filter((element) => !element.disabled && element.getClientRects().length > 0);
+  if (!focusable.length) { event.preventDefault(); settingsPanel.focus(); return; }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault(); last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault(); first.focus();
+  }
+});
 window.addEventListener('blur', () => { void cancelManualDrag(); });
 window.addEventListener('resize', scheduleHitRegionUpdate);
 
@@ -925,26 +1001,41 @@ function scheduleHitRegionUpdate() {
 
 // ── tauri events ──────────────────────────────────────────────────────────
 
-if (isTauri) {
-  listen('tray-set-lock', async e => { applyLock(Boolean(e.payload)); await saveConfig(); });
-  listen('tray-set-theme', async e => { applyTheme(e.payload); await saveConfig(); });
-  listen('tray-set-ontop', async e => { applyOnTop(Boolean(e.payload)); await saveConfig(); });
-  listen('context-menu-action', async e => {
-    await handleContextMenuAction(String(e.payload || ''), clockAnchor());
+async function registerTauriListeners() {
+  if (!isTauri) return;
+  const on = async (eventName, callback) => {
+    const unlisten = await listen(eventName, callback);
+    if (typeof unlisten === 'function') unlistenCallbacks.push(unlisten);
+  };
+  await on('tray-set-lock', async (event) => {
+    await commitConfig({ ...config, locked: Boolean(event.payload) });
   });
-  listen('config-updated', async e => {
-    config = normalizeConfig(e.payload);
-    applyTheme(config.theme);
-    applySurfaceStyle(config.surfaceStyle);
-    applyClockCount(config.clockCount);
-    applyMode(config.mode);
-    applyTimeFormat(config.timeFormat);
-    applyOpacity(config.opacity);
-    applyLock(config.locked);
-    applyOnTop(config.on_top);
-    buildClocks();
+  await on('tray-set-theme', async (event) => {
+    await commitConfig({ ...config, theme: event.payload });
   });
+  await on('tray-set-ontop', async (event) => {
+    await commitConfig({ ...config, on_top: Boolean(event.payload) });
+  });
+  await on('context-menu-action', async (event) => {
+    await handleContextMenuAction(String(event.payload || ''), clockAnchor());
+  });
+  await on('config-updated', (event) => renderConfig(event.payload));
 }
+
+window.addEventListener('pagehide', () => {
+  stopClock();
+  for (const unlisten of unlistenCallbacks.splice(0)) {
+    try { unlisten(); } catch {}
+  }
+});
+
+window.addEventListener('error', (event) => {
+  if (event?.message) setPomodoroStatus(`错误：${String(event.message).slice(0, 72)}`);
+});
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[unhandled rejection]', event.reason);
+  if (event?.reason) setPomodoroStatus(`错误：${String(event.reason).slice(0, 72)}`);
+});
 
 // ── init ──────────────────────────────────────────────────────────────────
 
@@ -952,18 +1043,11 @@ async function init() {
   try {
     await loadConfig();
 
-    applyTheme(config.theme);
-    applySurfaceStyle(config.surfaceStyle);
-    applyClockCount(config.clockCount);
-    applyMode(config.mode);
-    applyTimeFormat(config.timeFormat);
-    applyOpacity(config.opacity);
-    applyLock(config.locked);
-    applyOnTop(config.on_top);
+    renderConfig(config);
+    await syncNativePreferences(config, config, { force: true });
     resetPomodoro();
 
-    buildClocks();
-    startClock();
+    await registerTauriListeners();
     await applyHitRegionsNow();
     await notifyMainWindowReady();
     window.setTimeout(scheduleHitRegionUpdate, 400);

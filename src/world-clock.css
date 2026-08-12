@@ -5,7 +5,7 @@
   display: flex;
   flex-direction: column;
   gap: 7px;
-  font-family: "Manrope", system-ui, sans-serif;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --zm-fg: #f4f2ec;
   --zm-sub: rgba(255,255,255,.90);
   --zm-chip: rgba(255,255,255,.24);
@@ -145,7 +145,7 @@ body.surface-solid .world-pair.wp-light {
 .wp-stack .wp-pill {
   position: absolute; right: 0; top: 50%; transform: translateY(-50%);
   background: var(--wp-pill-bg); color: var(--wp-pill-fg);
-  font-family: "Manrope", system-ui, sans-serif;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   font-size: 13px; font-weight: 600; letter-spacing: .03em;
   padding: 4px 12px; border-radius: 999px;
   box-shadow: inset 0 0 0 1px var(--wp-pill-border), var(--wp-pill-shadow);
@@ -166,7 +166,7 @@ body.surface-solid .world-pair.wp-light {
 }
 .wp-row .wp-pill {
   background: var(--wp-pill-bg); color: var(--wp-pill-fg);
-  font-family: "Manrope", system-ui, sans-serif;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   font-size: 13px; font-weight: 700; letter-spacing: .02em;
   padding: 5px 12px; border-radius: 999px; white-space: nowrap;
   box-shadow: inset 0 0 0 1px var(--wp-pill-border), var(--wp-pill-shadow);

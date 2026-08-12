@@ -4,15 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>WorldClock</title>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Manrope:wght@300;400;500;600;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="flip-clock.css?v=object-shell-0317" />
-  <link rel="stylesheet" href="analog-clock.css?v=object-shell-0317" />
-  <link rel="stylesheet" href="world-clock.css?v=object-shell-0317" />
-  <link rel="stylesheet" href="style.css?v=object-shell-0317" />
+  <link rel="stylesheet" href="flip-clock.css?v=0400" />
+  <link rel="stylesheet" href="analog-clock.css?v=0400" />
+  <link rel="stylesheet" href="world-clock.css?v=0400" />
+  <link rel="stylesheet" href="style.css?v=0400" />
 </head>
 <body class="theme-classic surface-transparent clock-count-2">
   <div id="stage">
-    <section id="clock-body" aria-label="WorldClock clock body">
+    <section id="clock-body" aria-label="世界时钟" aria-describedby="interaction-help">
       <div id="object-shell">
         <div id="progress-ring" aria-hidden="true"></div>
 
@@ -24,7 +23,9 @@
       </div>
     </section>
 
-    <nav id="context-menu" class="floating-surface hidden" data-hit-region data-hit-radius="14" data-hit-pad="8" aria-label="快捷菜单">
+    <p id="interaction-help" class="visually-hidden">右键打开菜单，拖动时钟可移动窗口。</p>
+
+    <nav id="context-menu" class="floating-surface hidden" data-hit-region data-hit-radius="14" data-hit-pad="8" aria-label="快捷菜单" role="menu">
       <button data-menu-action="toggle-pomodoro" id="menu-pomodoro">开始番茄钟</button>
       <button data-menu-action="reset-pomodoro">重置番茄钟</button>
       <button data-menu-action="toggle-time-format" id="menu-format">切换 12h</button>
@@ -33,70 +34,74 @@
       <button data-menu-action="open-settings">打开设置</button>
     </nav>
 
-    <div id="settings-panel" class="floating-surface hidden" data-hit-region data-hit-radius="18" data-hit-pad="8">
+    <div id="settings-panel" class="floating-surface hidden" data-hit-region data-hit-radius="18" data-hit-pad="8" role="dialog" aria-modal="true" aria-labelledby="settings-title" tabindex="-1">
       <header>
-        <h3>设置</h3>
+        <h3 id="settings-title">设置</h3>
         <button id="btn-close-settings" aria-label="关闭设置">×</button>
       </header>
 
-      <section>
-        <label>时钟数量</label>
+      <fieldset>
+        <legend>时钟数量</legend>
         <div class="radio-group">
           <label><input type="radio" name="clock-count" value="1" /> 单时钟</label>
           <label><input type="radio" name="clock-count" value="2" checked /> 双时钟</label>
         </div>
-      </section>
+      </fieldset>
 
-      <section>
-        <label>显示模式</label>
+      <fieldset>
+        <legend>显示模式</legend>
         <div class="radio-group">
           <label><input type="radio" name="mode" value="digital" checked /> 数字</label>
           <label><input type="radio" name="mode" value="analog" /> 指针</label>
           <label><input type="radio" name="mode" value="both" /> 双显</label>
         </div>
-      </section>
+      </fieldset>
 
       <section>
-        <label>时钟 1 城市名</label>
-        <input type="text" id="set-label-1" value="Budapest" />
-        <label>时区</label>
-        <input type="text" id="set-tz-1" list="timezone-options" value="Europe/Budapest" />
+        <label for="set-label-1">时钟 1 城市名</label>
+        <input type="text" id="set-label-1" value="Budapest" maxlength="40" autocomplete="off" />
+        <label for="set-tz-1">时钟 1 时区</label>
+        <input type="text" id="set-tz-1" list="timezone-options" value="Europe/Budapest" autocomplete="off" />
       </section>
 
       <section id="clock-2-settings">
-        <label>时钟 2 城市名</label>
-        <input type="text" id="set-label-2" value="Beijing" />
-        <label>时区</label>
-        <input type="text" id="set-tz-2" list="timezone-options" value="Asia/Shanghai" />
+        <label for="set-label-2">时钟 2 城市名</label>
+        <input type="text" id="set-label-2" value="Beijing" maxlength="40" autocomplete="off" />
+        <label for="set-tz-2">时钟 2 时区</label>
+        <input type="text" id="set-tz-2" list="timezone-options" value="Asia/Shanghai" autocomplete="off" />
       </section>
 
       <datalist id="timezone-options"></datalist>
 
-      <section>
-        <label>外观风格</label>
+      <fieldset>
+        <legend>外观风格</legend>
         <div class="radio-group">
           <label><input type="radio" name="theme" value="classic" checked /> Classic 经典黑</label>
           <label><input type="radio" name="theme" value="minimal" /> Minimal 浅色</label>
           <label><input type="radio" name="theme" value="cute" /> Cute 可爱暖色</label>
           <label><input type="radio" name="theme" value="glass" /> Glass 玻璃</label>
         </div>
-      </section>
+      </fieldset>
 
-      <section>
-        <label>背景样式</label>
+      <fieldset>
+        <legend>背景样式</legend>
         <div class="radio-group">
           <label><input type="radio" name="surface-style" value="transparent" checked /> 透明物件</label>
           <label><input type="radio" name="surface-style" value="solid" /> 局部底色</label>
         </div>
-      </section>
+      </fieldset>
 
-      <section>
-        <label>时间格式</label>
+      <fieldset>
+        <legend>时间格式与精度</legend>
         <div class="radio-group">
           <label><input type="radio" name="time-format" value="24" checked /> 24h</label>
           <label><input type="radio" name="time-format" value="12" /> 12h</label>
         </div>
-      </section>
+        <label class="toggle-label">
+          <input type="checkbox" id="set-show-seconds" />
+          显示秒（耗电更高）
+        </label>
+      </fieldset>
 
       <section>
         <label for="set-opacity">局部透明度</label>
@@ -104,10 +109,12 @@
       </section>
 
       <section>
-        <label>番茄钟</label>
+        <span class="section-label">番茄钟</span>
         <div class="split-inputs">
-          <label>专注 <input type="number" id="set-focus-minutes" min="1" max="120" value="25" /></label>
-          <label>休息 <input type="number" id="set-break-minutes" min="1" max="60" value="5" /></label>
+          <label for="set-focus-minutes">专注</label>
+          <input type="number" id="set-focus-minutes" min="1" max="120" value="25" />
+          <label for="set-break-minutes">休息</label>
+          <input type="number" id="set-break-minutes" min="1" max="60" value="5" />
         </div>
       </section>
 
@@ -129,26 +136,11 @@
     </div>
   </div>
 
-  <script>
-    window.addEventListener('error', event => {
-      const status = document.getElementById('pomodoro-status');
-      if (status && event?.message) {
-        status.classList.remove('hidden');
-        status.textContent = String(event.message).slice(0, 90);
-      }
-    });
-    window.addEventListener('unhandledrejection', event => {
-      const status = document.getElementById('pomodoro-status');
-      if (status && event?.reason) {
-        status.classList.remove('hidden');
-        status.textContent = String(event.reason).slice(0, 90);
-      }
-    });
-  </script>
-  <script src="tz-util.js"></script>
-  <script src="flip-clock.js"></script>
-  <script src="analog-clock.js"></script>
-  <script src="world-clock.js"></script>
-  <script src="main.js?v=object-shell-0317"></script>
+  <script src="config.js?v=0400"></script>
+  <script src="tz-util.js?v=0400"></script>
+  <script src="flip-clock.js?v=0400"></script>
+  <script src="analog-clock.js?v=0400"></script>
+  <script src="world-clock.js?v=0400"></script>
+  <script src="main.js?v=0400"></script>
 </body>
 </html>

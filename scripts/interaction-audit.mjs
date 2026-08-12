@@ -2,6 +2,7 @@ import fs from 'node:fs';
 
 const files = {
   index: fs.readFileSync(new URL('../src/index.html', import.meta.url), 'utf8'),
+  config: fs.readFileSync(new URL('../src/config.js', import.meta.url), 'utf8'),
   main: fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8'),
   settings: fs.readFileSync(new URL('../src/settings.js', import.meta.url), 'utf8'),
   style: fs.readFileSync(new URL('../src/style.css', import.meta.url), 'utf8'),
@@ -99,7 +100,7 @@ const checks = [
   },
   {
     name: 'context menu opens settings natively instead of bouncing through the webview',
-    ok: hasRust(/"context_open_settings"\s*=>\s*\{\s*let _ = open_settings_window\(app\);\s*\}/),
+    ok: hasRust(/"context_open_settings"\s*=>\s*\{[\s\S]*?open_settings_window\(app\)[\s\S]*?\n\s*\}/),
   },
   {
     name: 'main script is cache-busted so webview upgrades do not run stale interaction code',
@@ -138,7 +139,23 @@ const checks = [
     name: 'legacy solid backing configs migrate back to transparent object mode',
     ok: files.main.includes('surfaceStyleExplicit')
       && files.settings.includes('surfaceStyleExplicit')
-      && /surfaceStyle:\s*surfaceStyleExplicit\s*\?\s*normalizeSurfaceStyle/.test(files.main),
+      && /surfaceStyle:\s*surfaceStyleExplicit\s*\?\s*normalizeSurfaceStyle/.test(files.config),
+  },
+  {
+    name: 'layout transactions restore exact native window bounds on failure',
+    ok: files.main.includes("invoke('get_main_window_bounds')")
+      && files.main.includes("invoke('restore_main_window_bounds', { bounds: originalBounds })")
+      && files.settings.includes("invoke('get_main_window_bounds')")
+      && files.settings.includes("invoke('restore_main_window_bounds', { bounds: originalBounds })")
+      && files.lib.includes('fn get_main_window_bounds')
+      && files.lib.includes('fn restore_main_window_bounds'),
+  },
+  {
+    name: 'inline settings only auto-fit when layout-affecting fields change',
+    ok: files.config.includes('function shouldFitWindow(previousValue, nextValue)')
+      && files.main.includes('const shouldFit = shouldFitWindow(config, next);')
+      && files.main.includes('commitConfig(next, { fit: shouldFit })')
+      && files.settings.includes('const shouldFit = shouldFitWindow(previous, next);'),
   },
 ];
 
