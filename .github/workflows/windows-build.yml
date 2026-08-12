@@ -1,76 +1,192 @@
-name: Build Windows App
+name: Windows CI and Release
 
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
-      - master
+    branches: [main]
   push:
-    branches:
-      - main
-      - master
-    tags:
-      - 'v*'
+    branches: [main]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/v') }}
 
 jobs:
-  build-windows:
-    name: Build Windows executable
-    runs-on: windows-latest
+  rustsec-audit:
+    name: Audit Rust dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: "22"
+          persist-credentials: false
+
+      - name: Setup Rust 1.97.1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.1
+
+      - name: Install cargo-audit 0.22.2
+        run: cargo install cargo-audit --version 0.22.2 --locked
+
+      - name: Audit Cargo.lock with RustSec
+        run: cargo audit --file src-tauri/Cargo.lock
+
+  build-windows:
+    name: Test and build Windows x64
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      CARGO_TERM_COLOR: always
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.19.0"
           cache: npm
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust 1.97.1
+        uses: dtolnay/rust-toolchain@6c977a6ca4077a0ceb28ffbe03f59d46e9ac8772
+        with:
+          toolchain: 1.97.1
+          components: clippy, rustfmt
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Audit visual contrast
-        run: npm run audit:contrast
-
-      - name: Audit desktop interaction
-        run: npm run audit:interaction
-
-      - name: Audit desktop icons
-        run: npm run audit:icons
-
-      - name: Build Tauri Windows app
-        run: npx tauri build --no-bundle
-
-      - name: Package portable executable
-        shell: powershell
-        run: |
-          New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Copy-Item src-tauri/target/release/worldclock.exe dist/worldclock.exe
-          Compress-Archive -Path dist/worldclock.exe -DestinationPath dist/worldclock-portable.zip -Force
-
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: worldclock-windows
-          if-no-files-found: error
-          path: |
-            dist/worldclock-portable.zip
-            dist/worldclock.exe
-
-      - name: Create GitHub Release
+      - name: Check release version on tags
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        shell: pwsh
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tauriVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $cargoVersion = (Select-String -Path src-tauri/Cargo.toml -Pattern '^version = "([^"]+)"$' | Select-Object -First 1).Matches.Groups[1].Value
+          if ($env:GITHUB_REF_NAME -ne "v$packageVersion") {
+            throw "Tag $env:GITHUB_REF_NAME does not match package version v$packageVersion"
+          }
+          if ($tauriVersion -ne $packageVersion -or $cargoVersion -ne $packageVersion) {
+            throw "Version mismatch: package=$packageVersion tauri=$tauriVersion cargo=$cargoVersion"
+          }
+
+      - name: Test and audit frontend
+        run: npm run check
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --all --check
+
+      - name: Lint Rust
+        working-directory: src-tauri
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+
+      - name: Test Rust
+        working-directory: src-tauri
+        run: cargo test --locked --all-targets --all-features
+
+      - name: Build NSIS installer and portable executable
+        # The second `--` is Tauri's runner separator; `--locked` reaches Cargo.
+        run: npm run tauri -- build --bundles nsis --ci -- --locked
+
+      - name: Package and verify release files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $dist = Join-Path $PWD "dist"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+
+          $portableSource = Join-Path $PWD "src-tauri/target/release/worldclock.exe"
+          if (-not (Test-Path $portableSource -PathType Leaf)) {
+            throw "Portable executable was not produced: $portableSource"
+          }
+
+          $installers = @(Get-ChildItem "src-tauri/target/release/bundle/nsis" -Filter "*.exe" -File)
+          if ($installers.Count -ne 1) {
+            throw "Expected exactly one NSIS installer, found $($installers.Count)"
+          }
+
+          $portableName = "WorldClock_${version}_windows-x86_64-portable.exe"
+          $archiveName = "WorldClock_${version}_windows-x86_64-portable.zip"
+          $installerName = "WorldClock_${version}_windows-x86_64-setup.exe"
+          Copy-Item $portableSource (Join-Path $dist $portableName)
+          Copy-Item $installers[0].FullName (Join-Path $dist $installerName)
+          Compress-Archive -Path (Join-Path $dist $portableName) -DestinationPath (Join-Path $dist $archiveName) -Force
+
+          $releaseNames = @($portableName, $archiveName, $installerName)
+          foreach ($name in $releaseNames) {
+            $path = Join-Path $dist $name
+            if (-not (Test-Path $path -PathType Leaf) -or (Get-Item $path).Length -le 0) {
+              throw "Release file is missing or empty: $path"
+            }
+          }
+
+          $checksumLines = foreach ($name in $releaseNames) {
+            $hash = (Get-FileHash (Join-Path $dist $name) -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $name"
+          }
+          $checksumPath = Join-Path $dist "SHA256SUMS"
+          [System.IO.File]::WriteAllText(
+            $checksumPath,
+            (($checksumLines -join "`n") + "`n"),
+            [System.Text.Encoding]::ASCII
+          )
+          if ((Get-Item $checksumPath).Length -le 0) {
+            throw "SHA256SUMS is empty"
+          }
+
+      - name: Upload verified Windows artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          files: |
-            dist/worldclock-portable.zip
-            dist/worldclock.exe
+          name: worldclock-windows-x86_64
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            dist/WorldClock_*_windows-x86_64-portable.exe
+            dist/WorldClock_*_windows-x86_64-portable.zip
+            dist/WorldClock_*_windows-x86_64-setup.exe
+            dist/SHA256SUMS
+
+  release:
+    name: Publish tagged release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build-windows, rustsec-audit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download verified Windows artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: worldclock-windows-x86_64
+          path: release
+
+      - name: Verify checksums
+        working-directory: release
+        run: sha256sum --check SHA256SUMS
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          files: release/*
+          fail_on_unmatched_files: true
           generate_release_notes: true
           draft: false
           prerelease: false

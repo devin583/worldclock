@@ -17,6 +17,59 @@
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  function stopAligned(host) {
+    if (host._timer != null) clearTimeout(host._timer);
+    host._timer = null;
+    if (host._visibilityHandler) {
+      document.removeEventListener('visibilitychange', host._visibilityHandler);
+      host._visibilityHandler = null;
+    }
+  }
+
+  function startAligned(host, cadence, render) {
+    stopAligned(host);
+    const schedule = () => {
+      if (document.hidden) return;
+      const remainder = Date.now() % cadence;
+      const delay = (remainder === 0 ? cadence : cadence - remainder) + 8;
+      host._timer = setTimeout(() => {
+        host._timer = null;
+        if (document.hidden) return;
+        render(false);
+        schedule();
+      }, delay);
+    };
+    host._visibilityHandler = () => {
+      if (host._timer != null) clearTimeout(host._timer);
+      host._timer = null;
+      if (!document.hidden) {
+        render(true);
+        schedule();
+      }
+    };
+    document.addEventListener('visibilitychange', host._visibilityHandler);
+    if (!document.hidden) {
+      render(true);
+      schedule();
+    }
+  }
+
+  function replaceMeta(container, values) {
+    const nodes = [];
+    values.forEach((value, index) => {
+      if (index) {
+        const dot = document.createElement('span');
+        dot.className = 'fc-dot';
+        dot.textContent = '·';
+        nodes.push(dot);
+      }
+      const item = document.createElement('span');
+      item.textContent = value;
+      nodes.push(item);
+    });
+    container.replaceChildren(...nodes);
+  }
+
   function makeDigit() {
     const d = document.createElement('div');
     d.className = 'fc-digit';
@@ -106,6 +159,8 @@
 
       const variant = this.getAttribute('variant') || 'classic';
       this.classList.add('flip-clock', 'fc-' + variant);
+      this.setAttribute('role', 'timer');
+      this.setAttribute('aria-live', 'off');
 
       this.fields = (this.getAttribute('fields') || 'hms').toLowerCase();
       this.hour12 = this.hasAttribute('hour12');
@@ -120,12 +175,14 @@
       if (this.metaTokens.length) {
         this.metaEl = document.createElement('div');
         this.metaEl.className = 'fc-meta';
+        this.metaEl.setAttribute('aria-hidden', 'true');
         this.appendChild(this.metaEl);
       }
 
       // digit row
       const row = document.createElement('div');
       row.className = 'fc-row';
+      row.setAttribute('aria-hidden', 'true');
       this.hh = buildPair(this); row.appendChild(this.hh.el);
       this.mm = buildPair(this); row.appendChild(this.mm.el);
       if (this.fields === 'hms') { this.ss = buildPair(this); row.appendChild(this.ss.el); }
@@ -145,16 +202,12 @@
     disconnectedCallback() { this._stop(); }
 
     _start() {
-      if (this._timer) return;
-      const tick = () => {
-        this._render(this._first);
+      startAligned(this, this.ss ? 1000 : 60000, (immediate) => {
+        this._render(immediate || this._first);
         this._first = false;
-        const now = Date.now();
-        this._timer = setTimeout(tick, 1000 - (now % 1000));
-      };
-      tick();
+      });
     }
-    _stop() { clearTimeout(this._timer); this._timer = null; }
+    _stop() { stopAligned(this); }
 
     _render(immediate) {
       const z = (window.TZ ? window.TZ.parts(this.tz) : null) || (() => { const n = new Date(); return { h: n.getHours(), m: n.getMinutes(), s: n.getSeconds(), day: n.getDay(), date: n.getDate(), month: n.getMonth() + 1 }; })();
@@ -163,6 +216,9 @@
       if (this.hour12) { h = h % 12; if (h === 0) h = 12; }
       const m = z.m;
       const s = z.s;
+      const hhText = String(h).padStart(2, '0');
+      const mmText = String(m).padStart(2, '0');
+      const ssText = String(s).padStart(2, '0');
 
       const set = (pair, value) => {
         const t = String(Math.floor(value / 10));
@@ -194,11 +250,16 @@
         const joined = parts.join('\u0001');
         if (this._metaCache !== joined) {
           this._metaCache = joined;
-          this.metaEl.innerHTML = parts
-            .map((p) => '<span>' + p + '</span>')
-            .join('<span class="fc-dot">·</span>');
+          replaceMeta(this.metaEl, parts);
         }
       }
+
+      const timeText = hhText + ':' + mmText + (this.ss ? ':' + ssText : '');
+      const location = this.locationText || this.tz || (this.lang === 'en' ? 'Local time' : '本地时间');
+      const period = this.hour12
+        ? ' ' + (this.lang === 'en' ? (isPm ? 'PM' : 'AM') : (isPm ? '下午' : '上午'))
+        : '';
+      this.setAttribute('aria-label', location + ' ' + timeText + period);
     }
   }
 

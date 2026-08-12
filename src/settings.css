@@ -24,7 +24,7 @@ body {
   overflow: hidden;
   background: transparent;
   color: var(--text);
-  font-family: "Manrope", "Segoe UI Variable Text", system-ui, sans-serif;
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   user-select: none;
 }
@@ -119,6 +119,20 @@ input { font: inherit; }
 
 label {
   display: block;
+  margin: 10px 0 7px;
+  color: var(--sub);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
   margin: 10px 0 7px;
   color: var(--sub);
   font-size: 12px;
@@ -245,6 +259,13 @@ footer button {
   cursor: pointer;
   font-weight: 800;
 }
+
+:where(button, input):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 76%, white);
+  outline-offset: 2px;
+}
+
+button:disabled { cursor: wait; opacity: .62; }
 
 #btn-cancel {
   border: 1px solid rgba(255, 255, 255, .14);
